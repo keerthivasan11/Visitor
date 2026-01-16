@@ -40,6 +40,17 @@ public class VisitorHistory {
     private LocalTime checkInTime;
     private LocalTime checkOutTime;
 
+    private String rejectionRemarks;
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "approved_by_id")
+    private User approvedBy;
+
+    @Column(columnDefinition = "TEXT")
+    private String imageUrl;
+
+    private String idProof;
+
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "tenant_id")
     private Tenant tenant;

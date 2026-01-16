@@ -19,6 +19,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @Service
@@ -278,7 +279,28 @@ public class VisitorService {
         visitor.setStatus(request.getStatus());
         visitor.setApprovedBy(admin);
         visitor.setRejectionRemarks(request.getRemarks());
-        return visitorRepository.save(visitor);
+        visitor = visitorRepository.save(visitor);
+
+        // Save to history table
+        VisitorHistory historyEntry = VisitorHistory.builder()
+                .visitor(visitor)
+                .visitorName(visitor.getVisitorName())
+                .mobileNumber(visitor.getMobileNumber())
+                .visitType(visitor.getVisitType())
+                .idProof(visitor.getIdProof())
+                .imageUrl(visitor.getImageUrl())
+                .employeeToMeet(visitor.getEmployeeToMeet())
+                .status(visitor.getStatus())
+                .visitDate(visitor.getVisitDate())
+                .tenant(visitor.getTenant())
+                .createdBy(visitor.getCreatedBy())
+                .approvedBy(admin)
+                .rejectionRemarks(visitor.getRejectionRemarks())
+                .build();
+
+        visitorHistoryRepository.save(historyEntry);
+
+        return visitor;
     }
 
     public Visitor checkIn(Long visitorId) {
@@ -291,21 +313,35 @@ public class VisitorService {
         visitor.setCheckInTime(LocalTime.now());
         visitor = visitorRepository.save(visitor);
 
-        // Create history entry at check-in
-        VisitorHistory historyEntry = VisitorHistory.builder()
-                .visitor(visitor)
-                .visitorName(visitor.getVisitorName())
-                .mobileNumber(visitor.getMobileNumber())
-                .visitType(visitor.getVisitType())
-                .employeeToMeet(visitor.getEmployeeToMeet())
-                .status(visitor.getStatus())
-                .visitDate(visitor.getVisitDate())
-                .checkInTime(visitor.getCheckInTime())
-                .tenant(visitor.getTenant())
-                .createdBy(visitor.getCreatedBy())
-                .build();
+        // Try to find an existing history entry from approval step
+        Optional<VisitorHistory> existingHistory = visitorHistoryRepository.findByVisitor(visitor).stream()
+                .filter(h -> h.getCheckInTime() == null && h.getStatus() == VisitStatus.APPROVED)
+                .findFirst();
 
-        visitorHistoryRepository.save(historyEntry);
+        if (existingHistory.isPresent()) {
+            VisitorHistory history = existingHistory.get();
+            history.setStatus(visitor.getStatus());
+            history.setCheckInTime(visitor.getCheckInTime());
+            visitorHistoryRepository.save(history);
+        } else {
+            // Create new history entry at check-in (e.g. for scheduled visitors)
+            VisitorHistory historyEntry = VisitorHistory.builder()
+                    .visitor(visitor)
+                    .visitorName(visitor.getVisitorName())
+                    .mobileNumber(visitor.getMobileNumber())
+                    .visitType(visitor.getVisitType())
+                    .idProof(visitor.getIdProof())
+                    .imageUrl(visitor.getImageUrl())
+                    .employeeToMeet(visitor.getEmployeeToMeet())
+                    .status(visitor.getStatus())
+                    .visitDate(visitor.getVisitDate())
+                    .checkInTime(visitor.getCheckInTime())
+                    .tenant(visitor.getTenant())
+                    .createdBy(visitor.getCreatedBy())
+                    .build();
+
+            visitorHistoryRepository.save(historyEntry);
+        }
 
         return visitor;
     }
