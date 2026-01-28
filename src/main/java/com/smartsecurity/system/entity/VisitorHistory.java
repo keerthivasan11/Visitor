@@ -37,10 +37,6 @@ public class VisitorHistory {
 
     private String rejectionRemarks;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "approved_by_id")
-    private User approvedBy;
-
     @Column(columnDefinition = "TEXT")
     private String imageUrl;
 
@@ -50,7 +46,9 @@ public class VisitorHistory {
     @JoinColumn(name = "tenant_id")
     private Tenant tenant;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "created_by_id")
-    private User createdBy;
+    @Column(name = "created_by")
+    private Integer createdBy;
+
+    @Column(name = "approved_by")
+    private Integer approvedBy;
 }

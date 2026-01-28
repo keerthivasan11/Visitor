@@ -2,8 +2,10 @@ package com.smartsecurity.system.service;
 
 import com.smartsecurity.system.dto.AuthRequest;
 import com.smartsecurity.system.dto.AuthResponse;
+
 import com.smartsecurity.system.entity.User;
 import com.smartsecurity.system.repository.UserRepository;
+import com.smartsecurity.system.security.JwtAuthenticationFilter;
 import com.smartsecurity.system.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -61,4 +63,16 @@ public class AuthService {
                         throw new RuntimeException("Authentication failed. Please try again.");
                 }
         }
+
+        public void saveFcmToken(String fcmToken) {
+
+                User user1 = JwtAuthenticationFilter.getCurrentUser();
+
+                User user = userRepository.findById(user1.getId())
+                                .orElseThrow(() -> new RuntimeException("User not found"));
+
+                user.setFcmToken(fcmToken);
+                userRepository.save(user);
+        }
+
 }

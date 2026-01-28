@@ -1,19 +1,28 @@
 package com.smartsecurity.system.controller;
 
-import com.smartsecurity.system.dto.SecurityUserRequest;
+import com.smartsecurity.system.dto.StaffRequest;
 import com.smartsecurity.system.dto.TenantAdminRequest;
 import com.smartsecurity.system.dto.TenantRequest;
 import com.smartsecurity.system.dto.TenantResponse;
+
+import com.smartsecurity.system.entity.Staff;
+import com.smartsecurity.system.entity.StaffHistory;
 import com.smartsecurity.system.entity.Tenant;
 import com.smartsecurity.system.entity.User;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import com.smartsecurity.system.entity.VehicleHistory;
 import com.smartsecurity.system.entity.VisitorHistory;
+
 import com.smartsecurity.system.service.ReportService;
 import com.smartsecurity.system.service.TenantService;
-import com.smartsecurity.system.service.UserService;
+
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -22,19 +31,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/super-admin")
 @RequiredArgsConstructor
 public class SuperAdminController {
 
     private final TenantService tenantService;
-    private final UserService userService;
     private final ReportService reportService;
-
-    // @GetMapping("/tenants")
-    // public ResponseEntity<List<Tenant>> getAllTenants() {
-    //     return ResponseEntity.ok(tenantService.getAllTenants());
-    // }
 
     @GetMapping("/tenants")
     public ResponseEntity<List<TenantResponse>> getAllTenants() {
@@ -58,13 +62,14 @@ public class SuperAdminController {
 
     @PutMapping("/tenants/admins/{adminId}")
     public ResponseEntity<User> updateTenantAdmin(
-            @PathVariable Long adminId,
+            @PathVariable Integer adminId,
             @RequestBody TenantAdminRequest request) {
         return ResponseEntity.ok(tenantService.updateTenantAdmin(adminId, request));
     }
 
     @DeleteMapping("/tenants/admins/{adminId}")
-    public ResponseEntity<Map<String, String>> deleteTenantAdmin(@PathVariable Long adminId) {
+    public ResponseEntity<Map<String, String>> deleteTenantAdmin(@PathVariable Integer adminId) {
+        log.info("DELETE request received for adminId: {}", adminId);
         tenantService.deleteTenantAdmin(adminId);
         Map<String, String> response = new HashMap<>();
         response.put("message", "Tenant admin deleted successfully");
@@ -84,17 +89,6 @@ public class SuperAdminController {
         return ResponseEntity.ok(response);
     }
 
-    // Security User Management
-    @GetMapping("/security-users")
-    public ResponseEntity<List<User>> getAllSecurityUsers() {
-        return ResponseEntity.ok(userService.getSecurityUsers());
-    }
-
-    @PostMapping("/security-users")
-    public ResponseEntity<User> createSecurityUser(@RequestBody SecurityUserRequest request) {
-        return ResponseEntity.ok(userService.createSecurityUser(request));
-    }
-
     // Reports
     @GetMapping("/dashboard")
     public ResponseEntity<Map<String, Object>> getDashboardStats() {
@@ -102,7 +96,7 @@ public class SuperAdminController {
     }
 
     @GetMapping("/reports/visitors")
-    public ResponseEntity<List<VisitorHistory>> getVisitorReport(
+    public ResponseEntity<List<VisitorHistory>> getVisitorReport(@AuthenticationPrincipal User user,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(required = false) Long tenantId) {
@@ -110,10 +104,54 @@ public class SuperAdminController {
     }
 
     @GetMapping("/reports/vehicles")
-    public ResponseEntity<List<VehicleHistory>> getVehicleReport(
+    public ResponseEntity<List<VehicleHistory>> getVehicleReport(@AuthenticationPrincipal User user,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @RequestParam(required = false) Long tenantId) {
         return ResponseEntity.ok(reportService.getVehicleReport(startDate, endDate, tenantId));
+    }
+
+    @GetMapping("/reports/staff")
+    public ResponseEntity<List<StaffHistory>> getStaffReport(@AuthenticationPrincipal User user,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return ResponseEntity.ok(reportService.getStaffReport(startDate, endDate));
+    }
+
+    // staff
+
+    @GetMapping(value = "/getAllStaff")
+    public ResponseEntity<List<Staff>> getAllStaff() {
+        return ResponseEntity.ok(tenantService.getAllStaff());
+    }
+
+    @PostMapping(value = "/addStaff")
+    public ResponseEntity<Staff> addStaff(@RequestBody StaffRequest staffRequest) {
+        return ResponseEntity.ok(tenantService.addStaff(staffRequest));
+    }
+
+    @PutMapping("/updateStaff/{id}")
+    public ResponseEntity<Staff> updateStaff(@PathVariable Integer id, @RequestBody StaffRequest staffRequest) {
+        return ResponseEntity.ok(tenantService.updateStaff(id, staffRequest));
+    }
+
+    @DeleteMapping("/staff/{id}")
+    public ResponseEntity<Map<String, String>> deleteStaff(@PathVariable Integer id) {
+        tenantService.deleteStaff(id);
+
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Staff deleted successfully");
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/staff/{id}/check-in")
+    public ResponseEntity<Staff> checkIn(HttpServletRequest httpRequest, @PathVariable Integer id) {
+        return ResponseEntity.ok(tenantService.checkIn(id));
+    }
+
+    @PostMapping("/staff/{id}/check-out")
+    public ResponseEntity<Staff> checkOut(HttpServletRequest httpRequest, @PathVariable Integer id) {
+        return ResponseEntity.ok(tenantService.checkOut(id));
     }
 }

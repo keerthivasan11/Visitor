@@ -1,32 +1,27 @@
 package com.smartsecurity.system.util;
 
-import com.smartsecurity.system.entity.User;
-import com.smartsecurity.system.repository.UserRepository;
-import com.smartsecurity.system.security.JwtService;
+import jakarta.servlet.ServletRequest;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.xml.bind.DatatypeConverter;
+
 import org.springframework.stereotype.Component;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
 import lombok.RequiredArgsConstructor;
 
 @Component
 @RequiredArgsConstructor
 public class AuditLogUtil {
 
-    private final JwtService jwtService;
-    private final UserRepository userRepository;
+    // public Long getUserIdFromToken(ServletRequest servletRequest) {
+    //     HttpServletRequest request = (HttpServletRequest) servletRequest;
+    //     String token = request.getHeader("Authorization") != null ? request.getHeader("Authorization")
+    //             : (request.getParameter("access_token") != null ? request.getParameter("access_token") : "");
+    //     Claims claims = Jwts.parser().setSigningKey(DatatypeConverter.parseBase64Binary("Annular"))
+    //             .parseClaimsJws(token)
+    //             .getBody();
+    //     return Long.valueOf(claims.getId());
+    // }
 
-    public Long getUserIdFromToken(HttpServletRequest request) {
-        String authHeader = request.getHeader("Authorization");
-        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            return null;
-        }
-        String token = authHeader.substring(7);
-        try {
-            String email = jwtService.extractUsername(token);
-            return userRepository.findByEmail(email)
-                    .map(User::getId)
-                    .orElse(null);
-        } catch (Exception e) {
-            return null;
-        }
-    }
 }

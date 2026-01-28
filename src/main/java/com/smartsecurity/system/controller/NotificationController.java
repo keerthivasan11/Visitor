@@ -6,9 +6,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.google.firebase.messaging.FirebaseMessagingException;
+
 import com.smartsecurity.system.dto.NotificationRequest;
-import com.smartsecurity.system.service.NotificationService;
+import com.smartsecurity.system.entity.User;
+import com.smartsecurity.system.repository.UserRepository;
+import com.smartsecurity.system.service.NotificationDispatcher;
+
 
 import lombok.RequiredArgsConstructor;
 
@@ -18,17 +21,22 @@ import lombok.RequiredArgsConstructor;
 
 public class NotificationController {
 
-    private final NotificationService notificationService;
+        private final NotificationDispatcher notificationDispatcher;
+        private final UserRepository userRepository;
 
-    @PostMapping("/send")
-    public ResponseEntity<String> send(@RequestBody NotificationRequest request)
-            throws FirebaseMessagingException {
+        @PostMapping("/send")
+        public ResponseEntity<String> send(
+                        @RequestBody NotificationRequest request) {
+                User user = userRepository.findById(request.getUserId())
+                                .orElseThrow(() -> new RuntimeException("User not found"));
+                if (user.getFcmToken() == null) {
+                        return ResponseEntity.badRequest().body("User has no FCM token");
+                }
+                notificationDispatcher.sendAsync(
+                                user.getFcmToken(),
+                                request.getTitle(),
+                                request.getBody());
+                return ResponseEntity.ok("Notification sent");
+        }
 
-        String response = notificationService.sendToToken(
-                request.getToken(),
-                request.getTitle(),
-                request.getBody());
-
-        return ResponseEntity.ok(response);
-    }
 }

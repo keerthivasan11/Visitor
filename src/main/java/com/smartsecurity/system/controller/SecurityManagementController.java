@@ -7,7 +7,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/super-admin/security-personnel")
@@ -16,7 +18,7 @@ public class SecurityManagementController {
 
     private final SecurityService securityService;
 
-    @GetMapping
+    @GetMapping("/security/all")
     public ResponseEntity<List<Security>> getAllSecurity() {
         return ResponseEntity.ok(securityService.getAllSecurity());
     }
@@ -33,28 +35,30 @@ public class SecurityManagementController {
         return ResponseEntity.ok(securityService.getActiveSecurityPersonnel());
     }
 
-    @PostMapping
+    @PostMapping("/security/add")
     public ResponseEntity<Security> createSecurity(@RequestBody SecurityRequest request) {
         return ResponseEntity.ok(securityService.createSecurity(request));
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/security/{id}")
     public ResponseEntity<Security> updateSecurity(@PathVariable Long id, @RequestBody SecurityRequest request) {
         return ResponseEntity.ok(securityService.updateSecurity(id, request));
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteSecurity(@PathVariable Long id) {
+    @DeleteMapping("/security/{id}")
+    public ResponseEntity<Map<String, String>> deleteSecurity(@PathVariable Long id) {
         securityService.deleteSecurity(id);
-        return ResponseEntity.noContent().build();
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Security deleted successfully");
+        return ResponseEntity.ok(response);
     }
 
-    @PatchMapping("/{id}/deactivate")
+    @PatchMapping("/security/{id}/deactivate")
     public ResponseEntity<Security> deactivateSecurity(@PathVariable Long id) {
         return ResponseEntity.ok(securityService.deactivateSecurity(id));
     }
 
-    @PatchMapping("/{id}/activate")
+    @PatchMapping("/security/{id}/activate")
     public ResponseEntity<Security> activateSecurity(@PathVariable Long id) {
         return ResponseEntity.ok(securityService.activateSecurity(id));
     }

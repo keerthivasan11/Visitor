@@ -1,20 +1,33 @@
 package com.smartsecurity.system.service;
 
+import com.smartsecurity.system.dto.StaffRequest;
 import com.smartsecurity.system.dto.TenantAdminRequest;
 import com.smartsecurity.system.dto.TenantRequest;
 import com.smartsecurity.system.dto.TenantResponse;
+
+import com.smartsecurity.system.entity.Staff;
 import com.smartsecurity.system.entity.Tenant;
 import com.smartsecurity.system.entity.User;
+
+import com.smartsecurity.system.entity.StaffHistory;
 import com.smartsecurity.system.enums.Role;
+import com.smartsecurity.system.enums.VisitStatus;
+import com.smartsecurity.system.exception.ResourceNotFoundException;
+
+import com.smartsecurity.system.repository.StaffHistoryRepository;
+import com.smartsecurity.system.repository.StaffRepository;
 import com.smartsecurity.system.repository.TenantRepository;
 import com.smartsecurity.system.repository.UserRepository;
 import com.smartsecurity.system.repository.VehicleRepository;
+import com.smartsecurity.system.security.JwtAuthenticationFilter;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Slf4j
@@ -25,7 +38,11 @@ public class TenantService {
     private final TenantRepository tenantRepository;
     private final UserRepository userRepository;
     private final VehicleRepository vehicleRepository;
+    private final StaffRepository staffRepository;
+    private final StaffHistoryRepository staffHistoryRepository;
     private final PasswordEncoder passwordEncoder;
+
+    private final NotificationDispatcher notificationDispatcher;
 
     public List<TenantResponse> getAllTenants() {
         return tenantRepository.findAll().stream()
@@ -44,10 +61,6 @@ public class TenantService {
                 .toList();
     }
 
-    // public List<Tenant> getAllTenants() {
-    // return tenantRepository.findAll();
-    // }
-
     public Tenant createTenant(TenantRequest request) {
         Tenant tenant = Tenant.builder()
                 .companyName(request.getCompanyName())
@@ -56,7 +69,16 @@ public class TenantService {
                 .officeNumber(request.getOfficeNumber())
                 .status(request.getStatus())
                 .build();
-        return tenantRepository.save(tenant);
+        Tenant savedTenant = tenantRepository.save(tenant);
+        notifyTenantCreated(savedTenant);
+        return savedTenant;
+    }
+
+    private void notifyTenantCreated(Tenant tenant) {
+        notificationDispatcher.sendAsync(
+                "ADMIN_FCM_TOKEN", // fetch from DB ideally
+                "New Tenant Added",
+                "Tenant " + tenant.getCompanyName() + " created successfully");
     }
 
     public User addTenantAdmin(Long tenantId, TenantAdminRequest request) {
@@ -78,11 +100,12 @@ public class TenantService {
 
     public List<User> getTenantAdmins(Long tenantId) {
         // Tenant tenant = tenantRepository.findById(tenantId)
-        //         .orElseThrow(() -> new RuntimeException("Tenant not found"));
+        // .orElseThrow(() -> new RuntimeException("Tenant not found"));
         return userRepository.findByTenantId(tenantId);
     }
 
-    public void deleteTenantAdmin(Long adminId) {
+    @Transactional
+    public void deleteTenantAdmin(Integer adminId) {
         User admin = userRepository.findById(adminId)
                 .orElseThrow(() -> new RuntimeException("Admin not found"));
 
@@ -90,15 +113,17 @@ public class TenantService {
         if (admin.getRole() != Role.TENANT_ADMIN) {
             throw new RuntimeException("User is not a tenant admin");
         }
+        Tenant tenant = admin.getTenant();
 
-        log.info("Deleting tenant admin: {} (ID: {})", admin.getEmail(), adminId);
-
+        if (tenant != null) {
+            tenant.getAdmins().remove(admin);
+            admin.setTenant(null);
+        }
         userRepository.delete(admin);
-
-        log.info("Successfully deleted tenant admin: {}", admin.getEmail());
+        userRepository.flush();
     }
 
-    public User updateTenantAdmin(Long adminId, TenantAdminRequest request) {
+    public User updateTenantAdmin(Integer adminId, TenantAdminRequest request) {
         User admin = userRepository.findById(adminId)
                 .orElseThrow(() -> new RuntimeException("Admin not found"));
 
@@ -187,5 +212,116 @@ public class TenantService {
 
         log.info("Successfully deleted tenant: {} along with {} admin(s)",
                 tenant.getCompanyName(), adminCount);
+    }
+
+    // staff
+
+    public List<Staff> getAllStaff() {
+        return staffRepository.findAll();
+    }
+
+    public Staff addStaff(StaffRequest staffRequest) {
+        User currentUser = JwtAuthenticationFilter.getCurrentUser();
+        if (staffRequest.getMobileNumber() != null &&
+                staffRepository.findByMobileNumber(staffRequest.getMobileNumber()).isPresent()) {
+            throw new RuntimeException("Mobile number already exists");
+        }
+
+        Staff staff = Staff.builder()
+                .employeeCode(staffRequest.getEmployeeCode())
+                .address(staffRequest.getAddress())
+                .name(staffRequest.getName())
+                .mobileNumber(staffRequest.getMobileNumber())
+                .idProof(staffRequest.getIdProof())
+                .status(staffRequest.getStatus())
+                .createdBy(currentUser.getId())
+                // .updatedBy(staffRequest.getUpdatedBy())
+                .createdAt(LocalDateTime.now())
+                // .updatedAt(staffRequest.getUpdatedAt())
+                .build();
+
+        Staff savedStaff = staffRepository.save(staff);
+        return savedStaff;
+    }
+
+    public Staff updateStaff(Integer id, StaffRequest request) {
+        Staff staff = staffRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Staff not found"));
+        if (request.getEmployeeCode() != null) {
+            staff.setEmployeeCode(request.getEmployeeCode());
+        }
+        if (request.getAddress() != null) {
+            staff.setAddress(request.getAddress());
+        }
+        if (request.getName() != null) {
+            staff.setName(request.getName());
+        }
+
+        if (request.getMobileNumber() != null) {
+            staff.setMobileNumber(request.getMobileNumber());
+        }
+
+        if (request.getIdProof() != null) {
+            staff.setIdProof(request.getIdProof());
+        }
+        if (request.getStatus() != null) {
+            staff.setStatus(request.getStatus());
+        }
+
+        return staffRepository.save(staff);
+    }
+
+    @Transactional
+    public void deleteStaff(Integer staffId) {
+        Staff staff = staffRepository.findById(staffId)
+                .orElseThrow(() -> new ResourceNotFoundException("Staff not found"));
+        staffRepository.delete(staff);
+    }
+
+    public Staff checkIn(Integer staffId) {
+        Staff staff = staffRepository.findById(staffId)
+                .orElseThrow(() -> new RuntimeException("Staff not found"));
+
+        staff.setStatus(VisitStatus.CHECKED_IN);
+        staff.setCheckInTime(LocalDateTime.now());
+        staff = staffRepository.save(staff);
+
+        StaffHistory staffHistory = StaffHistory.builder()
+                .staffId(staff.getId())
+                .employeeCode(staff.getEmployeeCode())
+                .address(staff.getAddress())
+                .name(staff.getName())
+                .mobileNumber(staff.getMobileNumber())
+                .idProof(staff.getIdProof())
+                .status(staff.getStatus())
+                .checkInTime(staff.getCheckInTime())
+                .createdAt(LocalDateTime.now())
+                .createdBy(staff.getCreatedBy())
+                .build();
+
+        staffHistoryRepository.save(staffHistory);
+
+        return staff;
+    }
+
+    public Staff checkOut(Integer staffId) {
+        Staff staff = staffRepository.findById(staffId)
+                .orElseThrow(() -> new RuntimeException("Staff not found"));
+
+        if (staff.getStatus() != VisitStatus.CHECKED_IN) {
+            throw new RuntimeException("Staff is not checked in");
+        }
+
+        staff.setStatus(VisitStatus.CHECKED_OUT);
+        staff.setCheckOutTime(LocalDateTime.now());
+
+        staffHistoryRepository.findByStaffIdAndCheckOutTimeIsNull(staffId)
+                .ifPresent(history -> {
+                    history.setStatus(staff.getStatus());
+                    history.setCheckOutTime(staff.getCheckOutTime());
+                    staffHistoryRepository.save(history);
+                });
+
+        return staffRepository.save(staff);
     }
 }

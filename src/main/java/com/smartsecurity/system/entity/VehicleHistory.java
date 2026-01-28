@@ -1,6 +1,6 @@
 package com.smartsecurity.system.entity;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
+
 import com.smartsecurity.system.enums.VehicleStatus;
 import com.smartsecurity.system.enums.VehicleType;
 import com.smartsecurity.system.enums.UserType;
@@ -50,7 +50,6 @@ public class VehicleHistory {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "created_by_id", updatable = false)
-    private User createdBy;
+    @Column(name = "created_by")
+    private Integer createdBy;
 }

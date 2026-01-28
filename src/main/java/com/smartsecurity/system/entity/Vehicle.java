@@ -50,8 +50,7 @@ public class Vehicle {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "created_by_id", updatable = false)
-    private User createdBy;
+    @Column(name = "created_by")
+    private Integer createdBy;
 
 }

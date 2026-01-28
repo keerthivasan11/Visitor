@@ -8,7 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
-import java.time.LocalTime;
+
 import java.util.ArrayList;
 import java.util.List;
 import com.fasterxml.jackson.annotation.JsonIgnore;
@@ -33,14 +33,14 @@ public class VisitorRequest {
     @NotNull(message = "Tenant ID is required")
     private Long tenantId; // Single tenant ID
 
-    private Long assignedAdminId; // Backward compatibility for single ID
-    private List<Long> assignedAdminIds; // Multiple assigned tenant admin IDs
+    private Integer assignedAdminId; // Backward compatibility for single ID
+    private List<Integer> assignedAdminIds; // Multiple assigned tenant admin IDs
 
-    private Long createdByUserId;
+    private Integer createdByUserId;
 
     @JsonIgnore
-    public List<Long> getEffectiveAdminIds() {
-        List<Long> ids = new ArrayList<>();
+    public List<Integer> getEffectiveAdminIds() {
+        List<Integer> ids = new ArrayList<>();
         if (assignedAdminIds != null) {
             ids.addAll(assignedAdminIds);
         }

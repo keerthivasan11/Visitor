@@ -6,9 +6,11 @@ import com.smartsecurity.system.repository.TenantRepository;
 import com.smartsecurity.system.repository.VehicleHistoryRepository;
 import com.smartsecurity.system.repository.VehicleRepository;
 import com.smartsecurity.system.repository.VisitorHistoryRepository;
+import com.smartsecurity.system.repository.StaffHistoryRepository;
 import com.smartsecurity.system.repository.VisitorRepository;
 import com.smartsecurity.system.entity.VehicleHistory;
 import com.smartsecurity.system.entity.VisitorHistory;
+import com.smartsecurity.system.entity.StaffHistory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +32,7 @@ public class ReportService {
     private final TenantRepository tenantRepository;
     private final VehicleHistoryRepository vehicleHistoryRepository;
     private final VisitorHistoryRepository visitorHistoryRepository;
+    private final StaffHistoryRepository staffHistoryRepository;
 
     public Map<String, Object> getDashboardStats() {
         Map<String, Object> stats = new HashMap<>();
@@ -55,8 +58,14 @@ public class ReportService {
     public List<VehicleHistory> getVehicleReport(LocalDate startDate, LocalDate endDate, Long tenantId) {
         LocalDateTime start = (startDate != null) ? startDate.atStartOfDay() : LocalDateTime.of(1970, 1, 1, 0, 0);
         LocalDateTime end = (endDate != null) ? endDate.atTime(LocalTime.MAX) : LocalDateTime.now();
-
         return vehicleHistoryRepository.findByFilters(tenantId, start, end);
+    }
+
+    @Transactional(readOnly = true)
+    public List<StaffHistory> getStaffReport(LocalDate startDate, LocalDate endDate) {
+        LocalDateTime start = (startDate != null) ? startDate.atStartOfDay() : LocalDateTime.of(1970, 1, 1, 0, 0);
+        LocalDateTime end = (endDate != null) ? endDate.atTime(LocalTime.MAX) : LocalDateTime.now();
+        return staffHistoryRepository.findByFilters(start, end);
     }
 
 }

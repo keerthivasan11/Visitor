@@ -26,7 +26,8 @@ public class User implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "id")
+    private Integer id;
 
     @Column(unique = true, nullable = false)
     private String email;
@@ -48,10 +49,13 @@ public class User implements UserDetails {
     @Enumerated(EnumType.STRING)
     private UserStatus status;
 
+    @Column(name = "fcm_token")
+    private String fcmToken;
+
     @ManyToOne
     @JoinColumn(name = "tenant_id")
     @JsonBackReference("tenant-admins")
-    private Tenant tenant; 
+    private Tenant tenant;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

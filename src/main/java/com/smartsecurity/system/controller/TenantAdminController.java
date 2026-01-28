@@ -57,8 +57,7 @@ public class TenantAdminController {
 
     @DeleteMapping("/visitors/{id}")
     public ResponseEntity<Map<String, String>> deleteVisitor(
-            @PathVariable Long id
-           ) {
+            @PathVariable Long id) {
         visitorService.deleteVisitor(id);
         Map<String, String> response = new HashMap<>();
         response.put("message", "Visitor deleted successfully");
@@ -83,7 +82,9 @@ public class TenantAdminController {
             @AuthenticationPrincipal User admin) {
         request.setCreatedByUserId(admin.getId());
         request.setTenantId(admin.getTenant().getId());
-        request.setCompany(admin.getTenant().getCompanyName());
+        if (request.getCompany() == null || request.getCompany().isBlank()) {
+            request.setCompany(admin.getTenant().getCompanyName());
+        }
         request.setUserType(UserType.TENANT);
         return ResponseEntity.ok(vehicleService.checkInVehicle(request));
     }

@@ -12,7 +12,6 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.Set;
 
-
 @Data
 @Builder
 @NoArgsConstructor
@@ -31,15 +30,13 @@ public class Visitor {
     @Column(nullable = false)
     private String mobileNumber;
 
-    private String visitType; 
+    private String visitType;
     private String idProof;
 
     @Column(columnDefinition = "TEXT")
-    private String imageUrl; 
+    private String imageUrl;
 
     private LocalDate visitDate;
-   
-   
 
     @Enumerated(EnumType.STRING)
     private VisitStatus status;
@@ -47,17 +44,13 @@ public class Visitor {
     @ManyToOne
     @JoinColumn(name = "tenant_id")
     @JsonIgnoreProperties({ "admins", "vehicles" })
-    private Tenant tenant; 
+    private Tenant tenant;
 
-    @ManyToOne
-    @JoinColumn(name = "approved_by_id")
-    @JsonIgnoreProperties({ "password", "tenant" })
-    private User approvedBy;
+    @Column(name = "approved_by")
+    private Integer approvedBy;
 
-    @ManyToOne
-    @JoinColumn(name = "created_by_id")
-    @JsonIgnoreProperties({ "password", "tenant" })
-    private User createdBy;
+    @Column(name = "created_by")
+    private Integer createdBy;
 
     @ManyToMany(cascade = { CascadeType.MERGE, CascadeType.PERSIST })
     @JoinTable(name = "visitor_admins", joinColumns = @JoinColumn(name = "visitor_id"), inverseJoinColumns = @JoinColumn(name = "admin_id"))
@@ -69,5 +62,4 @@ public class Visitor {
     private LocalTime checkInTime;
     private LocalTime checkOutTime;
 
-  
 }

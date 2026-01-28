@@ -2,9 +2,11 @@ package com.smartsecurity.system.service;
 
 import com.smartsecurity.system.dto.ApprovalRequest;
 import com.smartsecurity.system.dto.VisitorRequest;
+
 import com.smartsecurity.system.entity.Tenant;
 import com.smartsecurity.system.entity.User;
 import com.smartsecurity.system.entity.Visitor;
+import com.smartsecurity.system.enums.Role;
 import com.smartsecurity.system.enums.VisitStatus;
 import com.smartsecurity.system.repository.TenantRepository;
 import com.smartsecurity.system.repository.UserRepository;
@@ -30,6 +32,7 @@ public class VisitorService {
     private final TenantRepository tenantRepository;
     private final UserRepository userRepository;
     private final VisitorHistoryRepository visitorHistoryRepository;
+    private final NotificationDispatcher notificationDispatcher;
 
     public List<Visitor> getVisitorsForDate(LocalDate date) {
         return visitorRepository.findByVisitDate(date);
@@ -83,7 +86,7 @@ public class VisitorService {
     public Visitor scheduleVisitor(VisitorRequest request, User tenantAdmin) {
         try {
             System.out.println("=== Scheduling Visitor ===");
-            List<Long> adminIds = request.getEffectiveAdminIds();
+            List<Integer> adminIds = request.getEffectiveAdminIds();
             System.out.println("Effective admin IDs to assign: " + adminIds);
 
             Visitor visitor = Visitor.builder()
@@ -92,32 +95,36 @@ public class VisitorService {
                     .visitType(request.getVisitType())
                     .visitDate(request.getVisitDate())
                     .status(VisitStatus.APPROVED)
-                    .approvedBy(tenantAdmin)
+                    // .approvedBy(tenantAdmin.getId())
+                    .createdBy(tenantAdmin.getId())
                     .tenant(tenantAdmin.getTenant())
-                    .assignedAdmins(new HashSet<>())
+                    // .assignedAdmins(new HashSet<>())
                     .build();
 
             visitor = visitorRepository.save(visitor);
             System.out.println("Step 1: Visitor scheduled with base ID: " + visitor.getId());
 
-            if (!adminIds.isEmpty()) {
-                System.out.println("Step 2: Processing " + adminIds.size() + " admin IDs");
-                Set<User> adminsToAssign = new HashSet<>();
-                for (Long adminId : adminIds) {
-                    User admin = userRepository.findById(adminId)
-                            .orElseThrow(() -> new RuntimeException("Assigned admin not found: " + adminId));
+            // if (!adminIds.isEmpty()) {
+            // System.out.println("Step 2: Processing " + adminIds.size() + " admin IDs");
+            // Set<User> adminsToAssign = new HashSet<>();
+            // for (Integer adminId : adminIds) {
+            // User admin = userRepository.findById(adminId)
+            // .orElseThrow(() -> new RuntimeException("Assigned admin not found: " +
+            // adminId));
 
-                    if (!admin.getTenant().getId().equals(tenantAdmin.getTenant().getId())) {
-                        System.out.println("NOTE: Admin " + adminId + " belongs to different tenant");
-                    }
-                    adminsToAssign.add(admin);
-                }
-                visitor.setAssignedAdmins(adminsToAssign);
-                visitor = visitorRepository.save(visitor);
-                System.out.println("Step 2 completes: Scheduled visitor " + visitor.getId() + " now has "
-                        + visitor.getAssignedAdmins().size() + " admins assigned.");
-            }
-
+            // if (!admin.getTenant().getId().equals(tenantAdmin.getTenant().getId())) {
+            // System.out.println("NOTE: Admin " + adminId + " belongs to different
+            // tenant");
+            // }
+            // adminsToAssign.add(admin);
+            // }
+            // visitor.setAssignedAdmins(adminsToAssign);
+            // visitor = visitorRepository.save(visitor);
+            // System.out.println("Step 2 completes: Scheduled visitor " + visitor.getId() +
+            // " now has "
+            // + visitor.getAssignedAdmins().size() + " admins assigned.");
+            // }
+            visitor = visitorRepository.save(visitor);
             System.out.println("=== End scheduling flow ===");
             return visitor;
         } catch (Exception e) {
@@ -164,16 +171,13 @@ public class VisitorService {
     @Transactional
     public Visitor addWalkInVisitor(VisitorRequest request) {
         System.out.println("=== Creating Walk-in Visitor ===");
-        List<Long> adminIds = request.getEffectiveAdminIds();
+        List<Integer> adminIds = request.getEffectiveAdminIds();
         System.out.println("Effective admin IDs to assign: " + adminIds);
 
         Tenant tenant = tenantRepository.findById(request.getTenantId())
                 .orElseThrow(() -> new RuntimeException("Tenant not found"));
 
-        User createdByUser = null;
-        if (request.getCreatedByUserId() != null) {
-            createdByUser = userRepository.findById(request.getCreatedByUserId()).orElse(null);
-        }
+        Integer createdByUserId = request.getCreatedByUserId();
 
         Visitor visitor = Visitor.builder()
                 .visitorName(request.getVisitorName())
@@ -184,7 +188,7 @@ public class VisitorService {
                 .visitDate(LocalDate.now())
                 .status(VisitStatus.PENDING)
                 .tenant(tenant)
-                .createdBy(createdByUser)
+                .createdBy(createdByUserId)
                 .assignedAdmins(new HashSet<>()) // Initialize empty set
                 .build();
 
@@ -194,7 +198,7 @@ public class VisitorService {
         if (!adminIds.isEmpty()) {
             System.out.println("Step 2: Processing " + adminIds.size() + " admin IDs");
             Set<User> adminsToAssign = new HashSet<>();
-            for (Long adminId : adminIds) {
+            for (Integer adminId : adminIds) {
                 User admin = userRepository.findById(adminId)
                         .orElseThrow(() -> new RuntimeException("Assigned admin not found: " + adminId));
 
@@ -213,7 +217,35 @@ public class VisitorService {
         }
 
         System.out.println("=== End creation flow ===");
+        // 🔔 PUSH NOTIFICATION (ASYNC)
+        sendVisitorCreatedNotifications(visitor);
         return visitor;
+    }
+
+    private void sendVisitorCreatedNotifications(Visitor visitor) {
+        System.out.println("Checking");
+        if (visitor.getAssignedAdmins() == null ||
+                visitor.getAssignedAdmins().isEmpty()) {
+            return;
+        }
+
+        String title = "New Walk-in Visitor";
+        String body = "Visitor " + visitor.getVisitorName()
+                + " is waiting for approval.";
+
+        for (User admin : visitor.getAssignedAdmins()) {
+
+            String fcmToken = admin.getFcmToken();
+
+            if (fcmToken == null || fcmToken.isBlank()) {
+                continue;
+            }
+
+            notificationDispatcher.sendAsync(
+                    fcmToken,
+                    title,
+                    body);
+        }
     }
 
     @Transactional
@@ -242,7 +274,7 @@ public class VisitorService {
         }
 
         visitor.setStatus(request.getStatus());
-        visitor.setApprovedBy(admin);
+        visitor.setApprovedBy(admin.getId());
         visitor.setRejectionRemarks(request.getRemarks());
         visitor = visitorRepository.save(visitor);
 
@@ -257,13 +289,46 @@ public class VisitorService {
                 .visitDate(visitor.getVisitDate())
                 .tenant(visitor.getTenant())
                 .createdBy(visitor.getCreatedBy())
-                .approvedBy(admin)
+                .approvedBy(admin.getId())
                 .rejectionRemarks(visitor.getRejectionRemarks())
                 .build();
 
         visitorHistoryRepository.save(historyEntry);
 
+        // 🔔 ADD NOTIFICATION CALL HERE ⬇⬇⬇
+        sendSecurityCreatedNotifications(visitor);
         return visitor;
+    }
+
+    private void sendSecurityCreatedNotifications(Visitor visitor) {
+        System.out.println("Checking");
+
+        List<User> security = userRepository.findByRole(Role.SECURITY_USER);
+        String approvedByName = "Admin";
+        Integer approvedById = visitor.getApprovedBy();
+
+        if (approvedById != null) {
+            approvedByName = userRepository
+                    .findById(approvedById) // Integer → Long
+                    .map(User::getFullName)
+                    .orElse("Admin");
+        }
+        String title = "Visitor Approved By " + approvedByName;
+        String body = "Visitor approved for " + visitor.getVisitorName();
+
+        for (User admin : security) {
+
+            String fcmToken = admin.getFcmToken();
+
+            if (fcmToken == null || fcmToken.isBlank()) {
+                continue;
+            }
+
+            notificationDispatcher.sendAsync(
+                    fcmToken,
+                    title,
+                    body);
+        }
     }
 
     @Transactional
@@ -332,7 +397,7 @@ public class VisitorService {
     public void deleteVisitor(Long visitorId) {
         Visitor visitor = visitorRepository.findById(visitorId)
                 .orElseThrow(() -> new RuntimeException("Visitor not found"));
-        visitorRepository.delete(visitor);
+        visitorRepository.deleteById(visitorId);
     }
 
     public List<Visitor> getAllVisitorsForTenant(Long tenantId, User admin) {

@@ -1,6 +1,6 @@
 package com.smartsecurity.system.repository;
 
-import com.smartsecurity.system.entity.Visitor;
+
 import com.smartsecurity.system.entity.VisitorHistory;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.repository.query.Param;

@@ -11,7 +11,7 @@ import com.smartsecurity.system.enums.Role;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 
@@ -72,6 +72,7 @@ public class SecurityService {
                 .fullName(request.getFullName())
                 .email(request.getEmail())
                 .mobileNumber(request.getMobileNumber())
+                .idProof(request.getIdProof())
                 .password(encodedPassword)
                 .role(Role.SECURITY_USER)
                 .status(request.getStatus() != null ? request.getStatus() : UserStatus.ACTIVE)
@@ -83,33 +84,57 @@ public class SecurityService {
         return savedSecurity;
     }
 
+    @Transactional
     public Security updateSecurity(Long id, SecurityRequest request) {
-        Security security = securityRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Security personnel not found"));
 
+        Security security = securityRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Security not found"));
+
+        // Find matching user using email
+        User user = userRepository.findByEmail(security.getEmail())
+                .orElseThrow(() -> new RuntimeException("User not found for this security"));
+
+        // ---------- UPDATE SECURITY ----------
         if (request.getFullName() != null) {
             security.setFullName(request.getFullName());
         }
+
         if (request.getEmail() != null && !request.getEmail().equals(security.getEmail())) {
-            if (securityRepository.findByEmail(request.getEmail()).isPresent()) {
+
+            if (securityRepository.findByEmail(request.getEmail()).isPresent()
+                    || userRepository.existsByEmail(request.getEmail())) {
                 throw new RuntimeException("Email already exists");
             }
+
             security.setEmail(request.getEmail());
+            user.setEmail(request.getEmail());
         }
+
         if (request.getMobileNumber() != null) {
             security.setMobileNumber(request.getMobileNumber());
+            user.setMobileNumber(request.getMobileNumber());
         }
+
         if (request.getPassword() != null) {
-            security.setPassword(passwordEncoder.encode(request.getPassword()));
+            String encoded = passwordEncoder.encode(request.getPassword());
+            security.setPassword(encoded);
+            user.setPassword(encoded);
         }
+
+        if (request.getStatus() != null) {
+            security.setStatus(request.getStatus());
+            user.setStatus(request.getStatus());
+        }
+
         if (request.getIdProof() != null) {
             security.setIdProof(request.getIdProof());
         }
-        if (request.getStatus() != null) {
-            security.setStatus(request.getStatus());
-        }
 
-        return securityRepository.save(security);
+        // Save BOTH
+        securityRepository.save(security);
+        userRepository.save(user);
+
+        return security;
     }
 
     public void deleteSecurity(Long id) {

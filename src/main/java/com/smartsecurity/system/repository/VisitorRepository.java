@@ -28,6 +28,6 @@ public interface VisitorRepository extends JpaRepository<Visitor, Long> {
     List<Visitor> findPendingForAdmin(
             @Param("status") VisitStatus status,
             @Param("tenantId") Long tenantId,
-            @Param("adminId") Long adminId
+            @Param("adminId") Integer adminId
     );
 }

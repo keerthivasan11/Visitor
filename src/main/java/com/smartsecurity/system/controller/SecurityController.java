@@ -3,9 +3,10 @@ package com.smartsecurity.system.controller;
 import com.smartsecurity.system.dto.TenantResponse;
 import com.smartsecurity.system.dto.VehicleRequest;
 import com.smartsecurity.system.dto.VisitorRequest;
-import com.smartsecurity.system.entity.Tenant;
 import com.smartsecurity.system.entity.Vehicle;
 import com.smartsecurity.system.enums.UserType;
+import com.smartsecurity.system.repository.UserRepository;
+import com.smartsecurity.system.security.JwtAuthenticationFilter;
 import com.smartsecurity.system.entity.Visitor;
 import com.smartsecurity.system.service.TenantService;
 import com.smartsecurity.system.service.VehicleService;
@@ -13,16 +14,13 @@ import com.smartsecurity.system.service.VisitorService;
 import com.smartsecurity.system.entity.User;
 import com.smartsecurity.system.entity.VehicleHistory;
 import com.smartsecurity.system.entity.VisitorHistory;
-import com.smartsecurity.system.service.ReportService;
-import com.smartsecurity.system.util.AuditLogUtil;
+
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -39,19 +37,12 @@ public class SecurityController {
     private final VisitorService visitorService;
     private final VehicleService vehicleService;
     private final TenantService tenantService;
-    private final ReportService reportService;
-    @Autowired
-    private AuditLogUtil auditLogUtil;
+    private final UserRepository userRepository;
 
     @GetMapping("/tenants")
     public ResponseEntity<List<TenantResponse>> getAllTenants() {
         return ResponseEntity.ok(tenantService.getAllTenants());
     }
-
-    // @GetMapping("/tenants")
-    // public ResponseEntity<List<Tenant>> getAllTenants() {
-    // return ResponseEntity.ok(tenantService.getAllTenants());
-    // }
 
     @GetMapping("/visitors/today")
     public ResponseEntity<List<Visitor>> getTodayVisitors() {
@@ -71,8 +62,10 @@ public class SecurityController {
     @PostMapping("/visitors/walk-in")
     public ResponseEntity<Visitor> addWalkIn(HttpServletRequest httpRequest,
             @Valid @RequestBody VisitorRequest request) {
-        Long userId = auditLogUtil.getUserIdFromToken(httpRequest);
-        request.setCreatedByUserId(userId);
+        User user1 = JwtAuthenticationFilter.getCurrentUser();
+        User user = userRepository.findById(user1.getId())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        request.setCreatedByUserId(user.getId());
         return ResponseEntity.ok(visitorService.addWalkInVisitor(request));
     }
 
@@ -120,8 +113,10 @@ public class SecurityController {
 
     @PostMapping("/vehicles/entry")
     public ResponseEntity<Vehicle> vehicleEntry(HttpServletRequest httpRequest, @RequestBody VehicleRequest request) {
-        Long userId = auditLogUtil.getUserIdFromToken(httpRequest);
-        request.setCreatedByUserId(userId);
+        // User user1 = JwtAuthenticationFilter.getCurrentUser();
+        // User user = userRepository.findById(user1.getId())
+        //         .orElseThrow(() -> new RuntimeException("User not found"));
+        // request.setCreatedByUserId(user.getId());
         request.setUserType(UserType.SECURITY);
         return ResponseEntity.ok(vehicleService.checkInVehicle(request));
     }
@@ -162,25 +157,4 @@ public class SecurityController {
         return ResponseEntity.ok(response);
     }
 
-    // Reports
-
-    @GetMapping("/reports/visitors")
-    public ResponseEntity<List<VisitorHistory>> getVisitorReport(
-            @AuthenticationPrincipal User user,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            @RequestParam(required = false) Long tenantId) {
-        Long id = (user.getTenant() != null) ? user.getTenant().getId() : tenantId;
-        return ResponseEntity.ok(reportService.getVisitorReport(startDate, endDate, id));
-    }
-
-    @GetMapping("/reports/vehicles")
-    public ResponseEntity<List<VehicleHistory>> getVehicleReport(
-            @AuthenticationPrincipal User user,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            @RequestParam(required = false) Long tenantId) {
-        Long id = (user.getTenant() != null) ? user.getTenant().getId() : tenantId;
-        return ResponseEntity.ok(reportService.getVehicleReport(startDate, endDate, id));
-    }
 }

@@ -2,11 +2,16 @@ package com.smartsecurity.system.controller;
 
 import com.smartsecurity.system.dto.AuthRequest;
 import com.smartsecurity.system.dto.AuthResponse;
+
+import com.smartsecurity.system.dto.SaveFcmTokenRequest;
 import com.smartsecurity.system.service.AuthService;
+
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+ 
 
     @Operation(summary = "User login", description = "Authenticate user with email and password, returns JWT token on success")
     @ApiResponses(value = {
@@ -38,4 +44,14 @@ public class AuthController {
         log.info("Login successful for email: {}", request.getEmail());
         return ResponseEntity.ok(response);
     }
+
+    @PostMapping("/save-fcm-token")
+    public ResponseEntity<String> saveFcmToken(
+            HttpServletRequest request,
+            @RequestBody SaveFcmTokenRequest body) {
+
+        authService.saveFcmToken(body.getFcmToken());
+        return ResponseEntity.ok("FCM token saved");
+    }
+
 }

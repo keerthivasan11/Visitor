@@ -7,9 +7,11 @@ import com.smartsecurity.system.entity.Vehicle;
 import com.smartsecurity.system.entity.VehicleHistory;
 import com.smartsecurity.system.enums.VehicleStatus;
 import com.smartsecurity.system.repository.TenantRepository;
-import com.smartsecurity.system.repository.UserRepository;
+
 import com.smartsecurity.system.repository.VehicleHistoryRepository;
 import com.smartsecurity.system.repository.VehicleRepository;
+import com.smartsecurity.system.security.JwtAuthenticationFilter;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -23,7 +25,6 @@ public class VehicleService {
 
     private final VehicleRepository vehicleRepository;
     private final TenantRepository tenantRepository;
-    private final UserRepository userRepository;
     private final VehicleHistoryRepository vehicleHistoryRepository;
 
     public List<Vehicle> getAllVehicles() {
@@ -46,6 +47,7 @@ public class VehicleService {
     }
 
     public Vehicle checkInVehicle(VehicleRequest request) {
+        User currentUser = JwtAuthenticationFilter.getCurrentUser();
         Optional<Vehicle> existingActive = vehicleRepository
                 .findByVehicleNumberAndCheckOutTimeIsNull(request.getVehicleNumber());
         if (existingActive.isPresent()) {
@@ -64,23 +66,17 @@ public class VehicleService {
             tenant = tenantRepository.findById(tenantId).orElse(null);
         }
 
-        User createdByUser = null;
-        if (request.getCreatedByUserId() != null) {
-            createdByUser = userRepository.findById(request.getCreatedByUserId()).orElse(null);
-        }
-
         Vehicle vehicle = Vehicle.builder()
                 .vehicleNumber(request.getVehicleNumber())
                 .vehicleType(request.getVehicleType())
                 .driverName(request.getDriverName())
-
                 .company(tenant != null ? tenant.getCompanyName() : request.getCompany())
                 .tenant(tenant)
                 .purpose(request.getPurpose())
                 .status(VehicleStatus.PENDING)
                 .userType(request.getUserType())
                 .createdAt(LocalDateTime.now())
-                .createdBy(createdByUser)
+                .createdBy(currentUser.getId())
                 .build();
         return vehicleRepository.save(vehicle);
     }
@@ -202,7 +198,7 @@ public class VehicleService {
     public void deleteVehicle(Long vehicleId) {
         Vehicle vehicle = vehicleRepository.findById(vehicleId)
                 .orElseThrow(() -> new RuntimeException("Vehicle not found"));
-        vehicleRepository.delete(vehicle);
+        vehicleRepository.deleteById(vehicleId);
     }
 
     public void deleteTenantVehicle(Long vehicleId, Long tenantId) {
