@@ -12,9 +12,12 @@ import com.smartsecurity.system.entity.VehicleHistory;
 import com.smartsecurity.system.entity.VisitorHistory;
 import com.smartsecurity.system.entity.StaffHistory;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import org.springframework.data.domain.Page;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -48,24 +51,95 @@ public class ReportService {
     }
 
     @Transactional(readOnly = true)
-    public List<VisitorHistory> getVisitorReport(LocalDate startDate, LocalDate endDate, Long tenantId) {
-        LocalDate start = (startDate != null) ? startDate : LocalDate.of(1970, 1, 1);
-        LocalDate end = (endDate != null) ? endDate : LocalDate.now();
-        return visitorHistoryRepository.findByFilters(tenantId, start, end);
+    public Page<VisitorHistory> getVisitorReport(LocalDate startDate, LocalDate endDate, Long tenantId, int page,
+            int size) {
+        // Defensive pagination
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.min(Math.max(size, 1), 100);
+
+        // Default date range (last 3 months)
+        LocalDate start = startDate != null
+                ? startDate
+                : LocalDate.now().minusMonths(3);
+
+        LocalDate end = endDate != null
+                ? endDate
+                : LocalDate.now();
+
+        Pageable pageable = PageRequest.of(
+                safePage,
+                safeSize,
+                Sort.by("visitDate").descending());
+
+        return visitorHistoryRepository.findByFilters(
+                tenantId,
+                start,
+                end,
+                pageable);
+
     }
 
     @Transactional(readOnly = true)
-    public List<VehicleHistory> getVehicleReport(LocalDate startDate, LocalDate endDate, Long tenantId) {
-        LocalDateTime start = (startDate != null) ? startDate.atStartOfDay() : LocalDateTime.of(1970, 1, 1, 0, 0);
-        LocalDateTime end = (endDate != null) ? endDate.atTime(LocalTime.MAX) : LocalDateTime.now();
-        return vehicleHistoryRepository.findByFilters(tenantId, start, end);
+    public Page<VehicleHistory> getVehicleReport(
+            LocalDate startDate,
+            LocalDate endDate,
+            Long tenantId,
+            int page,
+            int size) {
+
+        // Defensive pagination
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.min(Math.max(size, 1), 100);
+
+        LocalDateTime start = (startDate != null)
+                ? startDate.atStartOfDay()
+                : LocalDateTime.of(1970, 1, 1, 0, 0);
+
+        LocalDateTime end = (endDate != null)
+                ? endDate.atTime(LocalTime.MAX)
+                : LocalDateTime.now();
+
+        Pageable pageable = PageRequest.of(
+                safePage,
+                safeSize,
+                Sort.by("checkInTime").descending());
+
+        return vehicleHistoryRepository.findByFilters(
+                tenantId,
+                start,
+                end,
+                pageable);
     }
 
     @Transactional(readOnly = true)
-    public List<StaffHistory> getStaffReport(LocalDate startDate, LocalDate endDate) {
-        LocalDateTime start = (startDate != null) ? startDate.atStartOfDay() : LocalDateTime.of(1970, 1, 1, 0, 0);
-        LocalDateTime end = (endDate != null) ? endDate.atTime(LocalTime.MAX) : LocalDateTime.now();
-        return staffHistoryRepository.findByFilters(start, end);
+    public Page<StaffHistory> getStaffReport(
+            LocalDate startDate,
+            LocalDate endDate,
+            int page,
+            int size) {
+
+        // Defensive pagination
+        int safePage = Math.max(page, 0);
+        int safeSize = Math.min(Math.max(size, 1), 100);
+
+        LocalDateTime start = (startDate != null)
+                ? startDate.atStartOfDay()
+                : LocalDateTime.of(1970, 1, 1, 0, 0);
+
+        LocalDateTime end = (endDate != null)
+                ? endDate.atTime(LocalTime.MAX)
+                : LocalDateTime.now();
+
+        Pageable pageable = PageRequest.of(
+                safePage,
+                safeSize,
+                Sort.by("checkInTime").descending() // or correct staff time field
+        );
+
+        return staffHistoryRepository.findByFilters(
+                start,
+                end,
+                pageable);
     }
 
 }

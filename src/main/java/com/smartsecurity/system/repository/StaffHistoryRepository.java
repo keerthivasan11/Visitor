@@ -6,25 +6,26 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.smartsecurity.system.entity.StaffHistory;
-import com.smartsecurity.system.entity.VehicleHistory;
 
-import java.time.LocalDate;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Page;
+
 import java.time.LocalDateTime;
-import java.util.List;
+
 import java.util.Optional;
 
 @Repository
 public interface StaffHistoryRepository extends JpaRepository<StaffHistory, Integer> {
 
-  Optional<StaffHistory> findByStaffIdAndCheckOutTimeIsNull(Integer staffId);
+    Optional<StaffHistory> findByStaffIdAndCheckOutTimeIsNull(Integer staffId);
 
-  @Query("""
-          SELECT vh
-          FROM StaffHistory vh
-          WHERE vh.checkInTime BETWEEN :start AND :end
-      """)
-  List<StaffHistory> findByFilters(
-      @Param("start") LocalDateTime start,
-      @Param("end") LocalDateTime end);
+    @Query("""
+                SELECT s FROM StaffHistory s
+                WHERE s.checkInTime BETWEEN :start AND :end
+            """)
+    Page<StaffHistory> findByFilters(
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end,
+            Pageable pageable);
 
 }

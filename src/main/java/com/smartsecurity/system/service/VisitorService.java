@@ -5,6 +5,7 @@ import com.smartsecurity.system.dto.VisitorRequest;
 
 import com.smartsecurity.system.entity.Tenant;
 import com.smartsecurity.system.entity.User;
+import com.smartsecurity.system.entity.VehicleHistory;
 import com.smartsecurity.system.entity.Visitor;
 import com.smartsecurity.system.enums.Role;
 import com.smartsecurity.system.enums.VisitStatus;
@@ -14,10 +15,15 @@ import com.smartsecurity.system.repository.VisitorHistoryRepository;
 import com.smartsecurity.system.repository.VisitorRepository;
 import com.smartsecurity.system.entity.VisitorHistory;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.HashSet;
 import java.util.List;
@@ -250,34 +256,47 @@ public class VisitorService {
 
     @Transactional
     public Visitor approveOrReject(Long visitorId, ApprovalRequest request, User admin) {
+
+        // 🔐 Always reload admin from DB (IMPORTANT)
+        User adminUser = userRepository.findById(admin.getId())
+                .orElseThrow(() -> new RuntimeException("Admin not found"));
+
+        // 🔍 Fetch visitor
         Visitor visitor = visitorRepository.findById(visitorId)
                 .orElseThrow(() -> new RuntimeException("Visitor not found"));
 
+        // 🚫 Already processed check
         if (visitor.getStatus() != VisitStatus.PENDING) {
             throw new RuntimeException("Already processed: " + visitor.getStatus());
         }
 
-        boolean belongsToTenant = visitor.getTenant() != null &&
-                visitor.getTenant().getId().equals(admin.getTenant().getId());
+        // 🏢 Tenant validation
+        if (visitor.getTenant() == null || adminUser.getTenant() == null) {
+            throw new RuntimeException("Tenant information missing");
+        }
 
-        if (!belongsToTenant) {
+        if (!visitor.getTenant().getId().equals(adminUser.getTenant().getId())) {
             throw new RuntimeException("You can only approve/reject visitors for your tenant");
         }
 
+        // 👮 Assigned admin check (if present)
         if (visitor.getAssignedAdmins() != null && !visitor.getAssignedAdmins().isEmpty()) {
             boolean isAssigned = visitor.getAssignedAdmins().stream()
-                    .anyMatch(a -> a.getId().equals(admin.getId()));
+                    .anyMatch(a -> a.getId().equals(adminUser.getId()));
 
             if (!isAssigned) {
                 throw new RuntimeException("You are not assigned to approve/reject this visitor");
             }
         }
 
+        // ✅ Update visitor
         visitor.setStatus(request.getStatus());
-        visitor.setApprovedBy(admin.getId());
+        visitor.setApprovedBy(adminUser.getId());
         visitor.setRejectionRemarks(request.getRemarks());
+
         visitor = visitorRepository.save(visitor);
 
+        // 🧾 Save history
         VisitorHistory historyEntry = VisitorHistory.builder()
                 .visitorId(visitor.getId())
                 .visitorName(visitor.getVisitorName())
@@ -289,14 +308,15 @@ public class VisitorService {
                 .visitDate(visitor.getVisitDate())
                 .tenant(visitor.getTenant())
                 .createdBy(visitor.getCreatedBy())
-                .approvedBy(admin.getId())
+                .approvedBy(adminUser.getId())
                 .rejectionRemarks(visitor.getRejectionRemarks())
                 .build();
 
         visitorHistoryRepository.save(historyEntry);
 
-        // 🔔 ADD NOTIFICATION CALL HERE ⬇⬇⬇
+        // 🔔 Notifications
         sendSecurityCreatedNotifications(visitor);
+
         return visitor;
     }
 
@@ -339,7 +359,7 @@ public class VisitorService {
             throw new RuntimeException("Visitor not approved");
         }
         visitor.setStatus(VisitStatus.CHECKED_IN);
-        visitor.setCheckInTime(LocalTime.now());
+        visitor.setCheckInTime(LocalDateTime.now());
         visitor = visitorRepository.save(visitor);
 
         Optional<VisitorHistory> existingHistory = visitorHistoryRepository.findByVisitorId(visitorId).stream()
@@ -377,7 +397,7 @@ public class VisitorService {
         Visitor visitor = visitorRepository.findById(visitorId)
                 .orElseThrow(() -> new RuntimeException("Visitor not found"));
         visitor.setStatus(VisitStatus.CHECKED_OUT);
-        visitor.setCheckOutTime(LocalTime.now());
+        visitor.setCheckOutTime(LocalDateTime.now());
 
         visitorHistoryRepository.findByVisitorIdAndCheckOutTimeIsNull(visitorId)
                 .ifPresent(history -> {
@@ -389,9 +409,25 @@ public class VisitorService {
         return visitorRepository.save(visitor);
     }
 
-    public List<VisitorHistory> getVisitorHistory(Long visitorId) {
-        return visitorHistoryRepository.findByVisitorId(visitorId);
+    public Page<VisitorHistory> getVisitorHistory(Long visitorId, int page, int size, LocalDateTime start,
+            LocalDateTime end) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("checkInTime").descending());
+        return visitorHistoryRepository.findByVisitorIdWithFilters(visitorId, start, end, pageable);
     }
+
+    // @Transactional(readOnly = true)
+    // public Page<VisitorHistory> getVisitorHistory(
+    // Long visitorId,
+    // int page,
+    // int size) {
+    // int safePage = Math.max(page, 0);
+    // int safeSize = Math.min(Math.max(size, 1), 100);
+    // Pageable pageable = PageRequest.of(
+    // safePage,
+    // safeSize,
+    // Sort.by("visitDate").descending());
+    // return visitorHistoryRepository.findByVisitorId(visitorId, pageable);
+    // }
 
     @Transactional
     public void deleteVisitor(Long visitorId) {

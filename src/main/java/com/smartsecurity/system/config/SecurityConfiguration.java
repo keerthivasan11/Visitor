@@ -39,9 +39,8 @@ public class SecurityConfiguration {
                                                 .requestMatchers("/api/v1/common/**").authenticated()
                                                 .requestMatchers("/api/v1/super-admin/**").hasRole("SUPER_ADMIN")
                                                 .requestMatchers("/api/v1/tenant-admin/**").hasRole("TENANT_ADMIN")
-                                                .requestMatchers("/api/v1/security/**")
-                                                .hasAnyRole("SECURITY_USER", "TENANT_ADMIN")
-                                                .anyRequest().authenticated())
+                                                .requestMatchers("/api/v1/security/**").authenticated())
+
                                 .sessionManagement(session -> session
                                                 .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                                 .authenticationProvider(authenticationProvider)

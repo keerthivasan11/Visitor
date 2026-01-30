@@ -1,30 +1,47 @@
 package com.smartsecurity.system.repository;
 
-
+import com.smartsecurity.system.entity.VehicleHistory;
 import com.smartsecurity.system.entity.VisitorHistory;
+
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Page;
 
 import java.time.LocalDate;
-
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface VisitorHistoryRepository extends JpaRepository<VisitorHistory, Long> {
- 
 
-    List<VisitorHistory> findByVisitorId(Long visitorId);
+  List<VisitorHistory> findByVisitorId(Long visitorId);
 
-    Optional<VisitorHistory> findByVisitorIdAndCheckOutTimeIsNull(Long visitorId);
+  Optional<VisitorHistory> findByVisitorIdAndCheckOutTimeIsNull(Long visitorId);
 
-    @org.springframework.data.jpa.repository.Query("SELECT vh FROM VisitorHistory vh WHERE " +
-            "(:tenantId IS NULL OR (vh.tenant IS NOT NULL AND vh.tenant.id = :tenantId)) AND " +
-            "vh.visitDate BETWEEN :start AND :end AND " +
-       "vh.status IN ('CHECKED_IN', 'CHECKED_OUT')")
-    List<VisitorHistory> findByFilters(
-            @Param("tenantId") Long tenantId,
-            @Param("start") LocalDate start,
-            @Param("end") LocalDate end);
+  @Query("""
+          SELECT v FROM VisitorHistory v
+          WHERE (:tenantId IS NULL OR v.tenant.id = :tenantId)
+            AND v.visitDate BETWEEN :startDate AND :endDate
+      """)
+  Page<VisitorHistory> findByFilters(
+      @Param("tenantId") Long tenantId,
+      @Param("startDate") LocalDate startDate,
+      @Param("endDate") LocalDate endDate,
+      Pageable pageable);
+
+  @Query("""
+          SELECT v FROM VisitorHistory v
+          WHERE v.visitorId = :visitorId
+            AND v.checkInTime >= :start
+            AND v.checkInTime <= :end
+      """)
+  Page<VisitorHistory> findByVisitorIdWithFilters(
+      @Param("visitorId") Long visitorId,
+      @Param("start") LocalDateTime start,
+      @Param("end") LocalDateTime end,
+      Pageable pageable);
 }

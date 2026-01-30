@@ -9,6 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Set;
 
@@ -59,7 +60,7 @@ public class Visitor {
 
     private String rejectionRemarks;
 
-    private LocalTime checkInTime;
-    private LocalTime checkOutTime;
+   private LocalDateTime checkInTime;
+    private LocalDateTime checkOutTime;
 
 }

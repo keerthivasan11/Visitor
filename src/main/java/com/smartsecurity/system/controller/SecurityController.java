@@ -25,9 +25,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeParseException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.data.domain.Page;
 
 @RestController
 @RequestMapping("/api/v1/security")
@@ -71,7 +75,6 @@ public class SecurityController {
 
     @PostMapping("/visitors/{id}/check-in")
     public ResponseEntity<Visitor> checkIn(HttpServletRequest httpRequest, @PathVariable Long id) {
-
         return ResponseEntity.ok(visitorService.checkIn(id));
     }
 
@@ -82,8 +85,32 @@ public class SecurityController {
     }
 
     @GetMapping("/visitors/{id}/history")
-    public ResponseEntity<List<VisitorHistory>> getVisitorHistory(@PathVariable Long id) {
-        return ResponseEntity.ok(visitorService.getVisitorHistory(id));
+    public ResponseEntity<?> getVisitorHistory(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+        LocalDateTime start = null;
+        LocalDateTime end = null;
+        try {
+            if (startDate != null && !startDate.isEmpty()) {
+                start = LocalDate.parse(startDate).atStartOfDay();
+            }
+            if (endDate != null && !endDate.isEmpty()) {
+                end = LocalDate.parse(endDate).atTime(LocalTime.MAX);
+            }
+        } catch (DateTimeParseException e) {
+            return ResponseEntity.badRequest().body("Invalid date format. Use YYYY-MM-DD");
+        }
+        Page<VisitorHistory> historyPage = visitorService.getVisitorHistory(id, page, size, start, end);
+        if (historyPage.isEmpty()) {
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "no history found");
+            return ResponseEntity.ok(response);
+        }
+
+        return ResponseEntity.ok(historyPage);
     }
 
     // Vehicle Endpoints
@@ -113,10 +140,6 @@ public class SecurityController {
 
     @PostMapping("/vehicles/entry")
     public ResponseEntity<Vehicle> vehicleEntry(HttpServletRequest httpRequest, @RequestBody VehicleRequest request) {
-        // User user1 = JwtAuthenticationFilter.getCurrentUser();
-        // User user = userRepository.findById(user1.getId())
-        //         .orElseThrow(() -> new RuntimeException("User not found"));
-        // request.setCreatedByUserId(user.getId());
         request.setUserType(UserType.SECURITY);
         return ResponseEntity.ok(vehicleService.checkInVehicle(request));
     }
@@ -138,8 +161,36 @@ public class SecurityController {
     }
 
     @GetMapping("/vehicles/{id}/history")
-    public ResponseEntity<List<VehicleHistory>> getVehicleHistory(@PathVariable Long id) {
-        return ResponseEntity.ok(vehicleService.getVehicleHistory(id));
+    public ResponseEntity<?> getVehicleHistory(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate) {
+
+        LocalDateTime start = null;
+        LocalDateTime end = null;
+
+        try {
+            if (startDate != null && !startDate.isEmpty()) {
+                start = LocalDate.parse(startDate).atStartOfDay();
+            }
+            if (endDate != null && !endDate.isEmpty()) {
+                end = LocalDate.parse(endDate).atTime(LocalTime.MAX);
+            }
+        } catch (DateTimeParseException e) {
+            return ResponseEntity.badRequest().body("Invalid date format. Use YYYY-MM-DD");
+        }
+
+        Page<VehicleHistory> historyPage = vehicleService.getVehicleHistory(id, page, size, start, end);
+
+        if (historyPage.isEmpty()) {
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "no history found");
+            return ResponseEntity.ok(response);
+        }
+
+        return ResponseEntity.ok(historyPage);
     }
 
     @GetMapping("/vehicles/{number}")

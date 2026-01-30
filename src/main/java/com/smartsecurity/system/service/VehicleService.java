@@ -18,6 +18,10 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 @Service
 @RequiredArgsConstructor
@@ -183,8 +187,10 @@ public class VehicleService {
         return vehicleRepository.save(vehicle);
     }
 
-    public List<VehicleHistory> getVehicleHistory(Long vehicleId) {
-        return vehicleHistoryRepository.findByVehicleId(vehicleId);
+    public Page<VehicleHistory> getVehicleHistory(Long vehicleId, int page, int size, LocalDateTime start,
+            LocalDateTime end) {
+        Pageable pageable = PageRequest.of(page, size, Sort.by("checkInTime").descending());
+        return vehicleHistoryRepository.findByVehicleIdWithFilters(vehicleId, start, end, pageable);
     }
 
     public Optional<Vehicle> findByNumber(String number) {

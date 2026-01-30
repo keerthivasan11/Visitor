@@ -1,6 +1,5 @@
 package com.smartsecurity.system.entity;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.smartsecurity.system.enums.VisitStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -9,6 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 @Data
@@ -22,7 +22,7 @@ public class VisitorHistory {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
+    @Column(name = "visitor_id")
     private long visitorId;
     private String visitorName;
     private String mobileNumber;
@@ -32,8 +32,8 @@ public class VisitorHistory {
     private VisitStatus status;
 
     private LocalDate visitDate;
-    private LocalTime checkInTime;
-    private LocalTime checkOutTime;
+    private LocalDateTime checkInTime;
+    private LocalDateTime checkOutTime;
 
     private String rejectionRemarks;
 
