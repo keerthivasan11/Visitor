@@ -415,20 +415,6 @@ public class VisitorService {
         return visitorHistoryRepository.findByVisitorIdWithFilters(visitorId, start, end, pageable);
     }
 
-    // @Transactional(readOnly = true)
-    // public Page<VisitorHistory> getVisitorHistory(
-    // Long visitorId,
-    // int page,
-    // int size) {
-    // int safePage = Math.max(page, 0);
-    // int safeSize = Math.min(Math.max(size, 1), 100);
-    // Pageable pageable = PageRequest.of(
-    // safePage,
-    // safeSize,
-    // Sort.by("visitDate").descending());
-    // return visitorHistoryRepository.findByVisitorId(visitorId, pageable);
-    // }
-
     @Transactional
     public void deleteVisitor(Long visitorId) {
         Visitor visitor = visitorRepository.findById(visitorId)

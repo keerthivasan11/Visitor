@@ -87,7 +87,6 @@ public class ReportService {
             int page,
             int size) {
 
-        // Defensive pagination
         int safePage = Math.max(page, 0);
         int safeSize = Math.min(Math.max(size, 1), 100);
 

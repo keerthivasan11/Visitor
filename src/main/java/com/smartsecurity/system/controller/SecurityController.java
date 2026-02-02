@@ -43,7 +43,7 @@ public class SecurityController {
     private final TenantService tenantService;
     private final UserRepository userRepository;
 
-    @GetMapping("/tenants")
+    @GetMapping("/tenants/all")
     public ResponseEntity<List<TenantResponse>> getAllTenants() {
         return ResponseEntity.ok(tenantService.getAllTenants());
     }
@@ -84,9 +84,9 @@ public class SecurityController {
         return ResponseEntity.ok(visitorService.checkOut(id));
     }
 
-    @GetMapping("/visitors/{id}/history")
+    @GetMapping("/visitors/history")
     public ResponseEntity<?> getVisitorHistory(
-            @PathVariable Long id,
+            @RequestParam(required = false) Long visitorId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String startDate,
@@ -103,7 +103,7 @@ public class SecurityController {
         } catch (DateTimeParseException e) {
             return ResponseEntity.badRequest().body("Invalid date format. Use YYYY-MM-DD");
         }
-        Page<VisitorHistory> historyPage = visitorService.getVisitorHistory(id, page, size, start, end);
+        Page<VisitorHistory> historyPage = visitorService.getVisitorHistory(visitorId, page, size, start, end);
         if (historyPage.isEmpty()) {
             Map<String, String> response = new HashMap<>();
             response.put("message", "no history found");
@@ -115,7 +115,7 @@ public class SecurityController {
 
     // Vehicle Endpoints
 
-    @GetMapping("/vehicles")
+    @GetMapping("/vehicles/all")
     public ResponseEntity<List<Vehicle>> getAllVehicles() {
         return ResponseEntity.ok(vehicleService.getAllVehicles());
     }
@@ -160,9 +160,9 @@ public class SecurityController {
         return ResponseEntity.ok(vehicleService.checkOutVehicle(id));
     }
 
-    @GetMapping("/vehicles/{id}/history")
+    @GetMapping("/vehicles/history")
     public ResponseEntity<?> getVehicleHistory(
-            @PathVariable Long id,
+            @RequestParam(required = false) Long vehicleId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String startDate,
@@ -182,12 +182,10 @@ public class SecurityController {
             return ResponseEntity.badRequest().body("Invalid date format. Use YYYY-MM-DD");
         }
 
-        Page<VehicleHistory> historyPage = vehicleService.getVehicleHistory(id, page, size, start, end);
+        Page<VehicleHistory> historyPage = vehicleService.getVehicleHistory(vehicleId, page, size, start, end);
 
         if (historyPage.isEmpty()) {
-            Map<String, String> response = new HashMap<>();
-            response.put("message", "no history found");
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(Map.of("message", "no history found"));
         }
 
         return ResponseEntity.ok(historyPage);

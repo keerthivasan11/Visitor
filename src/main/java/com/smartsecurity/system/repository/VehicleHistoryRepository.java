@@ -29,23 +29,11 @@ public interface VehicleHistoryRepository extends JpaRepository<VehicleHistory, 
       @Param("end") LocalDateTime end,
       Pageable pageable);
 
-  // @Query("""
-  // SELECT v FROM VehicleHistory v
-  // WHERE v.vehicleId = :vehicleId
-  // AND (:start IS NULL OR v.checkInTime >= :start)
-  // AND (:end IS NULL OR v.checkInTime <= :end)
-  // """)
-  // Page<VehicleHistory> findByVehicleIdWithFilters(
-  // @Param("vehicleId") Long vehicleId,
-  // @Param("start") LocalDateTime start,
-  // @Param("end") LocalDateTime end,
-  // Pageable pageable);
-
   @Query("""
           SELECT v FROM VehicleHistory v
-          WHERE v.vehicleId = :vehicleId
-            AND v.checkInTime >= :start
-            AND v.checkInTime <= :end
+          WHERE (:vehicleId IS NULL OR v.vehicleId = :vehicleId)
+            AND v.checkInTime >= COALESCE(:start, v.checkInTime)
+            AND v.checkInTime <= COALESCE(:end, v.checkInTime)
       """)
   Page<VehicleHistory> findByVehicleIdWithFilters(
       @Param("vehicleId") Long vehicleId,

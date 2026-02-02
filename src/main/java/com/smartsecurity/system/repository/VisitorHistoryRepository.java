@@ -34,10 +34,10 @@ public interface VisitorHistoryRepository extends JpaRepository<VisitorHistory, 
       Pageable pageable);
 
   @Query("""
-          SELECT v FROM VisitorHistory v
-          WHERE v.visitorId = :visitorId
-            AND v.checkInTime >= :start
-            AND v.checkInTime <= :end
+          SELECT vh FROM VisitorHistory vh
+          WHERE (:visitorId IS NULL OR vh.visitorId = :visitorId)
+            AND vh.checkInTime >= COALESCE(:start, vh.checkInTime)
+            AND vh.checkInTime <= COALESCE(:end, vh.checkInTime)
       """)
   Page<VisitorHistory> findByVisitorIdWithFilters(
       @Param("visitorId") Long visitorId,

@@ -1,11 +1,11 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/visitor?createDatabaseIfNotExist=true
-    username: postgres
-    password: root
-    # url: jdbc:postgresql://13.127.201.197:5432/visitor?createDatabaseIfNotExist=true
-    # username: visitor
-    # password: visitor
+    # url: jdbc:postgresql://localhost:5432/visitor?createDatabaseIfNotExist=true
+    # username: postgres
+    # password: root
+    url: jdbc:postgresql://13.201.46.231:5432/visitor?createDatabaseIfNotExist=true
+    username: visitor
+    password: visitor
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:

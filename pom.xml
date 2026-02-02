@@ -11,6 +11,7 @@
 	<groupId>com.smartsecurity</groupId>
 	<artifactId>smart-security-system</artifactId>
 	<version>1.0.0</version>
+	<packaging>war</packaging>
 	<name>smart-security-system</name>
 	<description>Smart Security Management System Backend</description>
 	<properties>
