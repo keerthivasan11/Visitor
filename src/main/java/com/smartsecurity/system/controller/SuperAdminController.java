@@ -95,6 +95,16 @@ public class SuperAdminController {
         return ResponseEntity.ok(reportService.getDashboardStats());
     }
 
+    @GetMapping("/dashboard/visitors")
+    public ResponseEntity<Map<String, Object>> visitorsChart() {
+        return ResponseEntity.ok(reportService.getVisitorCharts());
+    }
+
+    @GetMapping("/dashboard/vehicles")
+    public ResponseEntity<Map<String, Object>> vehiclesChart() {
+        return ResponseEntity.ok(reportService.getVehicleCharts());
+    }
+
     @GetMapping("/reports/visitors")
     public ResponseEntity<Page<VisitorHistory>> getVisitorReport(@AuthenticationPrincipal User user,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
@@ -108,7 +118,7 @@ public class SuperAdminController {
     public ResponseEntity<Page<VehicleHistory>> getVehicleReport(@AuthenticationPrincipal User user,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
-            @RequestParam(required = false) Long tenantId,@RequestParam(defaultValue = "0") int page,
+            @RequestParam(required = false) Long tenantId, @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         return ResponseEntity.ok(reportService.getVehicleReport(startDate, endDate, tenantId, page, size));
     }
@@ -116,7 +126,8 @@ public class SuperAdminController {
     @GetMapping("/reports/staff")
     public ResponseEntity<Page<StaffHistory>> getStaffReport(@AuthenticationPrincipal User user,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,@RequestParam(defaultValue = "0") int page,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         return ResponseEntity.ok(reportService.getStaffReport(startDate, endDate, page, size));
     }
