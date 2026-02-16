@@ -1,0 +1,82 @@
+package com.smartsecurity.system.repository;
+
+import com.smartsecurity.system.entity.VehicleHistory;
+
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Page;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface VehicleHistoryRepository extends JpaRepository<VehicleHistory, Long> {
+
+  List<VehicleHistory> findByVehicleId(Long vehicleId);
+
+  Optional<VehicleHistory> findByVehicleIdAndCheckOutTimeIsNull(Long vehicleId);
+
+  @Query("""
+          SELECT v FROM VehicleHistory v
+          WHERE (:tenantId IS NULL OR v.tenant.id = :tenantId)
+            AND v.checkInTime BETWEEN :start AND :end
+      """)
+  Page<VehicleHistory> findByFilters(
+      @Param("tenantId") Long tenantId,
+      @Param("start") LocalDateTime start,
+      @Param("end") LocalDateTime end,
+      Pageable pageable);
+
+  @Query("""
+          SELECT v FROM VehicleHistory v
+          WHERE (:vehicleId IS NULL OR v.vehicleId = :vehicleId)
+            AND v.checkInTime >= COALESCE(:start, v.checkInTime)
+            AND v.checkInTime <= COALESCE(:end, v.checkInTime)
+      """)
+  Page<VehicleHistory> findByVehicleIdWithFilters(
+      @Param("vehicleId") Long vehicleId,
+      @Param("start") LocalDateTime start,
+      @Param("end") LocalDateTime end,
+      Pageable pageable);
+ @Query("""
+                SELECT DATE(v.checkInTime), COUNT(v)
+                FROM VehicleHistory v
+                WHERE v.checkInTime >= :start
+                GROUP BY DATE(v.checkInTime)
+                ORDER BY DATE(v.checkInTime)
+            """)
+    List<Object[]> countDailyVehicles(@Param("start") LocalDateTime start);
+
+    @Query("""
+                SELECT FUNCTION('date_trunc', 'week', v.checkInTime), COUNT(v)
+                FROM VehicleHistory v
+                WHERE v.checkInTime >= :start
+                GROUP BY FUNCTION('date_trunc', 'week', v.checkInTime)
+                ORDER BY FUNCTION('date_trunc', 'week', v.checkInTime)
+            """)
+    List<Object[]> countWeeklyVehicles(@Param("start") LocalDateTime start);
+
+    @Query("""
+                SELECT TO_CHAR(v.checkInTime, 'YYYY-MM'), COUNT(v)
+                FROM VehicleHistory v
+                WHERE v.checkInTime >= :start
+                GROUP BY TO_CHAR(v.checkInTime, 'YYYY-MM')
+                ORDER BY TO_CHAR(v.checkInTime, 'YYYY-MM')
+            """)
+    List<Object[]> countMonthlyVehicles(@Param("start") LocalDateTime start);
+
+   @Query("""
+               SELECT v FROM VehicleHistory v
+               WHERE (:tenantId IS NULL OR v.tenant.id = :tenantId)
+               AND v.checkInTime BETWEEN :start AND :end
+            """)
+    List<VehicleHistory> findByFiltersWithoutPagination(
+            @Param("tenantId") Long tenantId,
+            @Param("start") LocalDateTime  start,
+            @Param("end") LocalDateTime  end);
+}
