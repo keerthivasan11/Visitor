@@ -1,0 +1,19 @@
+# Maven build folder
+target/
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+*.iml
+
+# Private keys
+*.pem
+
+# Firebase / secret files
+firebase-service-account.json
+
+# OS files
+.DS_Store
+Thumbs.db
