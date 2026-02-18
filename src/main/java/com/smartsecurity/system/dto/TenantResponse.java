@@ -1,6 +1,6 @@
 package com.smartsecurity.system.dto;
 
-import java.util.List;
+import java.util.Set;
 
 import com.smartsecurity.system.entity.User;
 import com.smartsecurity.system.enums.UserStatus;
@@ -22,5 +22,6 @@ public class TenantResponse {
     private String officeNumber;
     private String block;
     private UserStatus status;
-    private List<User> admins;
+    // private Set<User> admins;
+    private Set<AdminResponse> admins;
 }

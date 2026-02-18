@@ -1,17 +1,19 @@
 package com.smartsecurity.system.entity;
 
-import com.fasterxml.jackson.annotation.JsonManagedReference;
+
 import com.smartsecurity.system.enums.UserStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
-import lombok.Builder;
+
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
+import java.util.HashSet;
+
+import java.util.Set;
 
 @Data
-@Builder
+
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
@@ -35,7 +37,10 @@ public class Tenant {
     @Enumerated(EnumType.STRING)
     private UserStatus status;
 
-    @OneToMany(mappedBy = "tenant", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
-    @JsonManagedReference("tenant-admins")
-    private List<User> admins;
+    @OneToMany(mappedBy = "tenant", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<User> admins = new HashSet<>();
+
+    @OneToMany(mappedBy = "tenant", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<Visitor> visitors = new HashSet<>();
+
 }

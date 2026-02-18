@@ -1,7 +1,8 @@
 package com.smartsecurity.system.repository;
 
 import com.smartsecurity.system.entity.VehicleHistory;
-
+import com.smartsecurity.system.enums.UserStatus;
+import com.smartsecurity.system.enums.VehicleStatus;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -13,7 +14,7 @@ import org.springframework.data.domain.Page;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
-
+import org.springframework.data.jpa.repository.Modifying;
 @Repository
 public interface VehicleHistoryRepository extends JpaRepository<VehicleHistory, Long> {
 
@@ -79,4 +80,12 @@ public interface VehicleHistoryRepository extends JpaRepository<VehicleHistory, 
             @Param("tenantId") Long tenantId,
             @Param("start") LocalDateTime  start,
             @Param("end") LocalDateTime  end);
+
+   void deleteByTenant_Id(Long id);
+
+   @Modifying
+   @Query("UPDATE VehicleHistory v SET v.status = :status WHERE v.tenant.id = :tenantId")
+   void updateStatusByTenantId(Long tenantId, VehicleStatus status);
+
+ 
 }

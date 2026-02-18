@@ -47,15 +47,15 @@ public class VisitorHistory {
     @Column(columnDefinition = "TEXT")
     private String idProof;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "tenant_id")
+    @ManyToOne
+    @JoinColumn(name = "tenant_id", nullable = false)
     private Tenant tenant;
 
     @Column(name = "created_by")
-    private Integer createdBy;
+    private Long createdBy;
 
     @Column(name = "approved_by")
-    private Integer approvedBy;
+    private Long approvedBy;
     @Column(columnDefinition = "TEXT")
     private String comments;
 }

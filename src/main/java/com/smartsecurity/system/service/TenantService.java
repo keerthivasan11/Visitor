@@ -1,7 +1,9 @@
 package com.smartsecurity.system.service;
 
+import com.smartsecurity.system.dto.AdminResponse;
 import com.smartsecurity.system.dto.StaffRequest;
 import com.smartsecurity.system.dto.TenantAdminRequest;
+import com.smartsecurity.system.dto.TenantAdminResponse;
 import com.smartsecurity.system.dto.TenantRequest;
 import com.smartsecurity.system.dto.TenantResponse;
 
@@ -11,15 +13,19 @@ import com.smartsecurity.system.entity.User;
 
 import com.smartsecurity.system.entity.StaffHistory;
 import com.smartsecurity.system.enums.Role;
-
+import com.smartsecurity.system.enums.UserStatus;
+import com.smartsecurity.system.enums.VehicleStatus;
 import com.smartsecurity.system.enums.VisitStatus;
 import com.smartsecurity.system.exception.ResourceNotFoundException;
-
+import com.smartsecurity.system.repository.FileRepository;
 import com.smartsecurity.system.repository.StaffHistoryRepository;
 import com.smartsecurity.system.repository.StaffRepository;
 import com.smartsecurity.system.repository.TenantRepository;
 import com.smartsecurity.system.repository.UserRepository;
+import com.smartsecurity.system.repository.VehicleHistoryRepository;
 import com.smartsecurity.system.repository.VehicleRepository;
+import com.smartsecurity.system.repository.VisitorHistoryRepository;
+import com.smartsecurity.system.repository.VisitorRepository;
 import com.smartsecurity.system.security.JwtAuthenticationFilter;
 
 import lombok.RequiredArgsConstructor;
@@ -35,7 +41,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -48,13 +59,62 @@ public class TenantService {
     private final StaffRepository staffRepository;
     private final StaffHistoryRepository staffHistoryRepository;
     private final PasswordEncoder passwordEncoder;
-
+    private final VisitorRepository visitorRepository;
     private final NotificationDispatcher notificationDispatcher;
+    private final VehicleHistoryRepository vehicleHistoryRepository;
+    private final FileRepository fileRepository;
+    private final VisitorHistoryRepository visitorHistoryRepository;
 
+    // public List<TenantResponse> getAllTenants() {
+    // return tenantRepository.findAll().stream()
+    // .map(tenant -> {
+    // List<User> admins = userRepository.findByTenantId(tenant.getId());
+    // return TenantResponse.builder()
+    // .id(tenant.getId())
+    // .companyName(tenant.getCompanyName())
+    // .companyCode(tenant.getCompanyCode())
+    // .floorNumber(tenant.getFloorNumber())
+    // .officeNumber(tenant.getOfficeNumber())
+    // .block(tenant.getBlock())
+    // .status(tenant.getStatus())
+    // .admins(admins)
+    // .build();
+    // })
+    // .toList();
+    // }
+
+    @Transactional(readOnly = true)
     public List<TenantResponse> getAllTenants() {
-        return tenantRepository.findAll().stream()
+
+        List<Tenant> tenants = tenantRepository.findAll();
+
+        // Collect all tenant IDs
+        List<Long> tenantIds = tenants.stream()
+                .map(Tenant::getId)
+                .collect(Collectors.toList());
+
+        // Fetch all users for these tenants in ONE query
+        List<User> allAdmins = userRepository.findByTenant_IdIn(tenantIds);
+
+        // Group admins by tenant ID
+        Map<Long, List<User>> adminsByTenant = allAdmins.stream()
+                .collect(Collectors.groupingBy(user -> user.getTenant().getId()));
+
+        // Build response
+        return tenants.stream()
                 .map(tenant -> {
-                    List<User> admins = userRepository.findByTenantId(tenant.getId());
+
+                    List<User> admins = adminsByTenant
+                            .getOrDefault(tenant.getId(), new ArrayList<>());
+
+                    Set<AdminResponse> adminResponses = admins.stream()
+                            .map(user -> AdminResponse.builder()
+                                    .id(user.getId())
+                                    .fullName(user.getFullName())
+                                    .email(user.getEmail())
+                                    .build())
+                            .collect(Collectors.toSet());
+
                     return TenantResponse.builder()
                             .id(tenant.getId())
                             .companyName(tenant.getCompanyName())
@@ -63,21 +123,20 @@ public class TenantService {
                             .officeNumber(tenant.getOfficeNumber())
                             .block(tenant.getBlock())
                             .status(tenant.getStatus())
-                            .admins(admins)
+                            .admins(adminResponses)
                             .build();
                 })
-                .toList();
+                .collect(Collectors.toList());
     }
 
     public Tenant createTenant(TenantRequest request) {
-        Tenant tenant = Tenant.builder()
-                .companyName(request.getCompanyName())
-                .companyCode(request.getCompanyCode())
-                .floorNumber(request.getFloorNumber())
-                .officeNumber(request.getOfficeNumber())
-                .block(request.getBlock())
-                .status(request.getStatus())
-                .build();
+        Tenant tenant = new Tenant();
+        tenant.setCompanyName(request.getCompanyName());
+        tenant.setCompanyCode(request.getCompanyCode());
+        tenant.setFloorNumber(request.getFloorNumber());
+        tenant.setOfficeNumber(request.getOfficeNumber());
+        tenant.setBlock(request.getBlock());
+        tenant.setStatus(request.getStatus());
         Tenant savedTenant = tenantRepository.save(tenant);
         notifyTenantCreated(savedTenant);
         return savedTenant;
@@ -104,18 +163,28 @@ public class TenantService {
                 .role(Role.TENANT_ADMIN)
                 .status(request.getStatus())
                 .tenant(tenant)
+                .createdDate(LocalDateTime.now())
                 .build();
         return userRepository.save(admin);
     }
 
-    public List<User> getTenantAdmins(Long tenantId) {
-        // Tenant tenant = tenantRepository.findById(tenantId)
-        // .orElseThrow(() -> new RuntimeException("Tenant not found"));
-        return userRepository.findByTenantId(tenantId);
+    public List<AdminResponse> getTenantAdmins(Long tenantId) {
+
+        List<User> users = userRepository.findByTenant_Id(tenantId);
+
+        return users.stream()
+                .map(user -> AdminResponse.builder()
+                        .id(user.getId())
+                        .fullName(user.getFullName())
+                        .email(user.getEmail())
+                        .mobileNumber(user.getMobileNumber())
+                        .idProof(user.getIdProof())
+                        .build())
+                .collect(Collectors.toList());
     }
 
     @Transactional
-    public void deleteTenantAdmin(Integer adminId) {
+    public void deleteTenantAdmin(Long adminId) {
         User admin = userRepository.findById(adminId)
                 .orElseThrow(() -> new RuntimeException("Admin not found"));
 
@@ -134,7 +203,7 @@ public class TenantService {
     }
 
     @Transactional
-    public User updateTenantAdmin(Integer adminId, TenantAdminRequest request) {
+    public TenantAdminResponse updateTenantAdmin(Long adminId, TenantAdminRequest request) {
         User admin = userRepository.findById(adminId)
                 .orElseThrow(() -> new RuntimeException("Admin not found"));
 
@@ -142,8 +211,6 @@ public class TenantService {
         if (admin.getRole() != Role.TENANT_ADMIN) {
             throw new RuntimeException("User is not a tenant admin");
         }
-
-        log.info("Updating tenant admin: {} (ID: {})", admin.getEmail(), adminId);
 
         // Update fields if provided
         if (request.getFullName() != null) {
@@ -167,9 +234,12 @@ public class TenantService {
 
         User updatedAdmin = userRepository.save(admin);
 
-        log.info("Successfully updated tenant admin: {}", admin.getEmail());
-
-        return updatedAdmin;
+        return new TenantAdminResponse(
+                updatedAdmin.getId(),
+                updatedAdmin.getFullName(),
+                updatedAdmin.getEmail(),
+                updatedAdmin.getMobileNumber(),
+                updatedAdmin.getStatus());
     }
 
     @Transactional
@@ -204,29 +274,25 @@ public class TenantService {
         Tenant tenant = tenantRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Tenant not found"));
 
-        // Check for active vehicles (vehicles that haven't checked out)
-        long activeVehicleCount = vehicleRepository.countByTenant_IdAndCheckOutTimeIsNull(tenant.getId());
+        long activeVehicleCount = vehicleRepository.countByTenant_IdAndCheckOutTimeIsNull(id);
 
         if (activeVehicleCount > 0) {
-            log.warn("Attempted to delete tenant {} with {} active vehicles",
-                    tenant.getCompanyName(), activeVehicleCount);
-            throw new RuntimeException(
-                    String.format(
-                            "Cannot delete tenant '%s'. There are %d active vehicle(s) that haven't checked out yet. " +
-                                    "Please ensure all vehicles are checked out before deleting the tenant.",
-                            tenant.getCompanyName(), activeVehicleCount));
+            throw new RuntimeException("Active vehicles exist.");
         }
 
-        log.info("Deleting tenant: {} (ID: {})", tenant.getCompanyName(), id);
+        visitorRepository.updateStatusByTenantId(id, VisitStatus.CHECKED_OUT);
 
-        // Get count for logging (admins only, vehicles are decoupled)
-        int adminCount = tenant.getAdmins() != null ? tenant.getAdmins().size() : 0;
+        visitorHistoryRepository.updateStatusByTenantId(id, VisitStatus.CHECKED_OUT);
 
-        // Delete tenant (cascade will handle users)
-        tenantRepository.delete(tenant);
+        vehicleRepository.updateStatusByTenantId(id, VehicleStatus.CHECKED_OUT);
+        vehicleHistoryRepository.updateStatusByTenantId(id, VehicleStatus.CHECKED_OUT);
 
-        log.info("Successfully deleted tenant: {} along with {} admin(s)",
-                tenant.getCompanyName(), adminCount);
+        userRepository.updateStatusByTenantId(id, UserStatus.INACTIVE);
+
+        fileRepository.updateStatusByTenantId(id, UserStatus.INACTIVE);
+
+        tenant.setStatus(UserStatus.INACTIVE);
+
     }
 
     // staff
@@ -251,9 +317,7 @@ public class TenantService {
                 .idProof(staffRequest.getIdProof())
                 .status(staffRequest.getStatus())
                 .createdBy(currentUser.getId())
-                // .updatedBy(staffRequest.getUpdatedBy())
                 .createdAt(LocalDateTime.now())
-                // .updatedAt(staffRequest.getUpdatedAt())
                 .build();
 
         Staff savedStaff = staffRepository.save(staff);

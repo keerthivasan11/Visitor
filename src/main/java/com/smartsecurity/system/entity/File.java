@@ -2,8 +2,13 @@ package com.smartsecurity.system.entity;
 
 import org.hibernate.annotations.CreationTimestamp;
 
+import com.smartsecurity.system.enums.UserStatus;
+
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import lombok.AllArgsConstructor;
@@ -34,7 +39,7 @@ public class File {
     private String fileType;
 
     @Column(name = "file_data", columnDefinition = "TEXT")
-    private String fileData; 
+    private String fileData;
 
     @CreationTimestamp
     private LocalDateTime createdAt;
@@ -42,5 +47,8 @@ public class File {
     @ManyToOne
     @JoinColumn(name = "visitor_id", nullable = false)
     private Visitor visitor;
+
+    @Enumerated(EnumType.STRING)
+    private UserStatus status;
 
 }

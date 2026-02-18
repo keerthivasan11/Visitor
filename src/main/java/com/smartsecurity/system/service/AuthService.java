@@ -4,7 +4,7 @@ import com.smartsecurity.system.dto.AuthRequest;
 import com.smartsecurity.system.dto.AuthResponse;
 import com.smartsecurity.system.entity.RefreshToken;
 import com.smartsecurity.system.entity.User;
-
+import com.smartsecurity.system.enums.UserStatus;
 import com.smartsecurity.system.repository.UserRepository;
 import com.smartsecurity.system.security.JwtAuthenticationFilter;
 
@@ -12,11 +12,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Value;
+
 @Slf4j
 @Service
 public class AuthService {
@@ -50,17 +52,12 @@ public class AuthService {
                         authenticationManager.authenticate(
                                         new UsernamePasswordAuthenticationToken(email, request.getPassword()));
 
-                        // Retrieve user details
                         User user = userRepository.findByEmail(email)
-                                        .orElseThrow(() -> {
-                                                log.warn("User not found after successful authentication: {}", email);
-                                                return new UsernameNotFoundException("User not found");
-                                        });
+                                        .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
                         // Generate JWT token
                         String jwtToken = jwtService.generateToken(user);
                         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user);
-                        log.info("User authenticated successfully: {} with role: {}", email, user.getRole());
 
                         return AuthResponse.builder()
                                         .accessToken(jwtToken)

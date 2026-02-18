@@ -1,7 +1,9 @@
 package com.smartsecurity.system.controller;
 
+import com.smartsecurity.system.dto.AdminResponse;
 import com.smartsecurity.system.dto.StaffRequest;
 import com.smartsecurity.system.dto.TenantAdminRequest;
+import com.smartsecurity.system.dto.TenantAdminResponse;
 import com.smartsecurity.system.dto.TenantRequest;
 import com.smartsecurity.system.dto.TenantResponse;
 
@@ -57,19 +59,20 @@ public class SuperAdminController {
     }
 
     @GetMapping("/tenants/{id}/admins")
-    public ResponseEntity<List<User>> getTenantAdmins(@PathVariable Long id) {
+    public ResponseEntity<List<AdminResponse>> getTenantAdmins(@PathVariable Long id) {
         return ResponseEntity.ok(tenantService.getTenantAdmins(id));
     }
 
     @PutMapping("/tenants/admins/{adminId}")
-    public ResponseEntity<User> updateTenantAdmin(
-            @PathVariable Integer adminId,
+    public ResponseEntity<TenantAdminResponse> updateTenantAdmin(
+            @PathVariable Long adminId,
             @RequestBody TenantAdminRequest request) {
-        return ResponseEntity.ok(tenantService.updateTenantAdmin(adminId, request));
+        TenantAdminResponse response = tenantService.updateTenantAdmin(adminId, request);
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/tenants/admins/{adminId}")
-    public ResponseEntity<Map<String, String>> deleteTenantAdmin(@PathVariable Integer adminId) {
+    public ResponseEntity<Map<String, String>> deleteTenantAdmin(@PathVariable Long adminId) {
         log.info("DELETE request received for adminId: {}", adminId);
         tenantService.deleteTenantAdmin(adminId);
         Map<String, String> response = new HashMap<>();

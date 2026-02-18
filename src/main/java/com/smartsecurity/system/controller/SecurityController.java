@@ -2,7 +2,10 @@ package com.smartsecurity.system.controller;
 
 import com.smartsecurity.system.dto.TenantResponse;
 import com.smartsecurity.system.dto.VehicleRequest;
+import com.smartsecurity.system.dto.VehicleResponse;
+import com.smartsecurity.system.dto.VisitorCheckInResponse;
 import com.smartsecurity.system.dto.VisitorRequest;
+import com.smartsecurity.system.dto.VisitorResponse;
 import com.smartsecurity.system.entity.Vehicle;
 import com.smartsecurity.system.enums.UserType;
 import com.smartsecurity.system.repository.FileRepository;
@@ -72,7 +75,7 @@ public class SecurityController {
     }
 
     @PostMapping("/visitors/walk-in")
-    public ResponseEntity<Visitor> addWalkIn(HttpServletRequest httpRequest,
+    public ResponseEntity<VisitorResponse> addWalkIn(HttpServletRequest httpRequest,
             @Valid @RequestBody VisitorRequest request) {
         User user1 = JwtAuthenticationFilter.getCurrentUser();
         User user = userRepository.findById(user1.getId())
@@ -82,7 +85,7 @@ public class SecurityController {
     }
 
     @PostMapping("/visitors/{id}/check-in")
-    public ResponseEntity<Visitor> checkIn(HttpServletRequest httpRequest, @PathVariable Long id) {
+    public ResponseEntity<VisitorCheckInResponse> checkIn(HttpServletRequest httpRequest, @PathVariable Long id) {
         return ResponseEntity.ok(visitorService.checkIn(id));
     }
 
@@ -129,7 +132,7 @@ public class SecurityController {
     }
 
     @GetMapping("/vehicles/checked-in")
-    public ResponseEntity<List<Vehicle>> getCheckedInVehicles() {
+    public ResponseEntity<List<VehicleResponse>> getCheckedInVehicles() {
         return ResponseEntity.ok(vehicleService.getCheckedInVehicles());
     }
 
@@ -147,9 +150,10 @@ public class SecurityController {
     }
 
     @PostMapping("/vehicles/entry")
-    public ResponseEntity<Vehicle> vehicleEntry(HttpServletRequest httpRequest, @RequestBody VehicleRequest request) {
+    public ResponseEntity<VehicleResponse> vehicleEntry(@RequestBody VehicleRequest request,
+            @AuthenticationPrincipal User currentUser) {
         request.setUserType(UserType.SECURITY);
-        return ResponseEntity.ok(vehicleService.checkInVehicle(request));
+        return ResponseEntity.ok(vehicleService.checkInVehicle(request, currentUser));
     }
 
     @PostMapping("/vehicles/{id}/check-in")

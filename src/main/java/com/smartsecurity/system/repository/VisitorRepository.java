@@ -1,9 +1,11 @@
 package com.smartsecurity.system.repository;
 
 import com.smartsecurity.system.entity.Visitor;
+import com.smartsecurity.system.enums.UserStatus;
 import com.smartsecurity.system.enums.VisitStatus;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -14,6 +16,7 @@ import java.util.List;
 
 @Repository
 public interface VisitorRepository extends JpaRepository<Visitor, Long> {
+
         List<Visitor> findByVisitDate(LocalDate date);
 
         long countByVisitDateAndStatusIn(LocalDate date, List<VisitStatus> statuses);
@@ -29,11 +32,12 @@ public interface VisitorRepository extends JpaRepository<Visitor, Long> {
         List<Visitor> findPendingForAdmin(
                         @Param("status") VisitStatus status,
                         @Param("tenantId") Long tenantId,
-                        @Param("adminId") Integer adminId);
-
-       
+                        @Param("adminId") Long adminId);
 
         List<Visitor> findByTenant_Id(Long tenantId);
 
+        @Modifying
+        @Query("UPDATE Visitor v SET v.status = :status WHERE v.tenant.id = :tenantId")
+        void updateStatusByTenantId(Long tenantId, VisitStatus status);
 
 }

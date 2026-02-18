@@ -51,5 +51,5 @@ public class VehicleHistory {
     private LocalDateTime createdAt;
 
     @Column(name = "created_by")
-    private Integer createdBy;
+    private Long createdBy;
 }

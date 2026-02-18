@@ -1,6 +1,7 @@
 package com.smartsecurity.system.service;
 
 import com.smartsecurity.system.dto.VehicleRequest;
+import com.smartsecurity.system.dto.VehicleResponse;
 import com.smartsecurity.system.entity.Tenant;
 import com.smartsecurity.system.entity.User;
 import com.smartsecurity.system.entity.Vehicle;
@@ -37,10 +38,18 @@ public class VehicleService {
         return vehicleRepository.findAll();
     }
 
-    public List<Vehicle> getCheckedInVehicles() {
-        return vehicleRepository.findAll().stream()
-                .filter(v -> v.getStatus() == VehicleStatus.PENDING ||
-                        v.getStatus() == VehicleStatus.CHECKED_IN)
+    public List<VehicleResponse> getCheckedInVehicles() {
+
+        List<Vehicle> vehicles = vehicleRepository.findByStatusIn(
+                List.of(VehicleStatus.PENDING, VehicleStatus.CHECKED_IN));
+
+        return vehicles.stream()
+                .map(v -> new VehicleResponse(
+                        v.getId(),
+                        v.getVehicleNumber(),
+                        v.getDriverName(),
+                        v.getStatus(),
+                        v.getCheckInTime()))
                 .toList();
     }
 
@@ -51,24 +60,20 @@ public class VehicleService {
     }
 
     @Transactional
-    public Vehicle checkInVehicle(VehicleRequest request) {
-        User currentUser = JwtAuthenticationFilter.getCurrentUser();
+    public VehicleResponse checkInVehicle(VehicleRequest request, User currentUser) {
+
         Optional<Vehicle> existingActive = vehicleRepository
                 .findByVehicleNumberAndCheckOutTimeIsNull(request.getVehicleNumber());
+
         if (existingActive.isPresent()) {
             throw new RuntimeException("Vehicle already inside");
         }
 
-        Long tenantId = request.getTenantId();
-        if (tenantId == null && request.getCompany() != null) {
-            tenantId = tenantRepository.findByCompanyName(request.getCompany())
-                    .map(t -> t.getId())
-                    .orElse(null);
-        }
-
         Tenant tenant = null;
-        if (tenantId != null) {
-            tenant = tenantRepository.findById(tenantId).orElse(null);
+
+        if (request.getTenantId() != null) {
+            tenant = tenantRepository.findById(request.getTenantId())
+                    .orElseThrow(() -> new RuntimeException("Tenant not found"));
         }
 
         Vehicle vehicle = Vehicle.builder()
@@ -83,7 +88,14 @@ public class VehicleService {
                 .createdAt(LocalDateTime.now())
                 .createdBy(currentUser.getId())
                 .build();
-        return vehicleRepository.save(vehicle);
+        vehicleRepository.save(vehicle);
+
+        return new VehicleResponse(
+                vehicle.getId(),
+                vehicle.getVehicleNumber(),
+                vehicle.getDriverName(),
+                vehicle.getStatus(),
+                vehicle.getCreatedAt());
     }
 
     @Transactional

@@ -34,14 +34,14 @@ public class VisitorRequest {
     @NotNull(message = "Tenant ID is required")
     private Long tenantId; 
 
-    private Integer assignedAdminId; 
-    private List<Integer> assignedAdminIds; 
+    private Long assignedAdminId; 
+    private List<Long> assignedAdminIds; 
 
-    private Integer createdByUserId;
+    private Long createdByUserId;
 
     @JsonIgnore
-    public List<Integer> getEffectiveAdminIds() {
-        List<Integer> ids = new ArrayList<>();
+    public List<Long> getEffectiveAdminIds() {
+        List<Long> ids = new ArrayList<>();
         if (assignedAdminIds != null) {
             ids.addAll(assignedAdminIds);
         }

@@ -1,6 +1,6 @@
 package com.smartsecurity.system.entity;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.smartsecurity.system.enums.Role;
 import com.smartsecurity.system.enums.UserStatus;
@@ -13,9 +13,11 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Date;
+
+import java.time.LocalDateTime;
 
 @Data
 @Builder
@@ -28,7 +30,7 @@ public class User implements UserDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
-    private Integer id;
+    private Long id;
 
     @Column(unique = true, nullable = false)
     private String email;
@@ -55,14 +57,17 @@ public class User implements UserDetails {
     @Column(name = "fcm_token")
     private String fcmToken;
 
-    @ManyToOne
+    // @ManyToOne
+    // @JoinColumn(name = "tenant_id")
+    // @JsonBackReference("tenant-admins")
+    // private Tenant tenant;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tenant_id")
-    @JsonBackReference("tenant-admins")
     private Tenant tenant;
 
-    @Temporal(TemporalType.DATE)
     @Column(name = "created_date")
-    private Date createdDate;
+    private LocalDateTime createdDate;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -93,4 +98,12 @@ public class User implements UserDetails {
     public boolean isEnabled() {
         return status == UserStatus.ACTIVE;
     }
+
+    @JsonIgnore
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<RefreshToken> refreshTokens = new ArrayList<>();
+
+
 }
+
+

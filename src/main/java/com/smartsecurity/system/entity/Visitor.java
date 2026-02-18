@@ -1,6 +1,6 @@
 package com.smartsecurity.system.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import com.smartsecurity.system.enums.VisitStatus;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -47,19 +47,17 @@ public class Visitor {
     private VisitStatus status;
 
     @ManyToOne
-    @JoinColumn(name = "tenant_id")
-    @JsonIgnoreProperties({ "admins", "vehicles" })
+    @JoinColumn(name = "tenant_id", nullable = false)
     private Tenant tenant;
 
     @Column(name = "approved_by")
-    private Integer approvedBy;
+    private Long approvedBy;
 
     @Column(name = "created_by")
-    private Integer createdBy;
+    private Long createdBy;
 
     @ManyToMany(cascade = { CascadeType.MERGE, CascadeType.PERSIST })
     @JoinTable(name = "visitor_admins", joinColumns = @JoinColumn(name = "visitor_id"), inverseJoinColumns = @JoinColumn(name = "admin_id"))
-    @JsonIgnoreProperties({ "password", "tenant" })
     private Set<User> assignedAdmins;
 
     @Column(columnDefinition = "TEXT")

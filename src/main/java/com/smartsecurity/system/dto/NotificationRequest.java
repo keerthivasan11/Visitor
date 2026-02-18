@@ -8,7 +8,7 @@ import jakarta.validation.constraints.NotNull;
 @Data
 public class NotificationRequest {
     @NotNull
-    private Integer userId;
+    private Long userId;
 
     @NotBlank
     private String title;

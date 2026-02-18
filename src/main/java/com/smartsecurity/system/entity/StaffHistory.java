@@ -40,7 +40,7 @@ public class StaffHistory {
     private VisitStatus status;
 
     @Column(name = "created_by")
-    private Integer createdBy;
+    private Long createdBy;
 
     // @Column(name = "updated_by")
     // private Integer updatedBy;

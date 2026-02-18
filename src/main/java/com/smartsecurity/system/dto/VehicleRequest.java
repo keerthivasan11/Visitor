@@ -18,6 +18,6 @@ public class VehicleRequest {
     private String company;
     private String purpose;
     private Long tenantId;
-    private Integer createdByUserId;
+    private Long createdByUserId;
     private UserType userType;
 }

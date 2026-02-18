@@ -3,11 +3,15 @@ package com.smartsecurity.system.controller;
 import com.smartsecurity.system.dto.ApprovalRequest;
 import com.smartsecurity.system.dto.VisitorRequest;
 import com.smartsecurity.system.dto.VisitorResponse;
+import com.smartsecurity.system.dto.VisitorUpdateResponse;
 import com.smartsecurity.system.dto.VehicleRequest;
+import com.smartsecurity.system.dto.VehicleResponse;
+import com.smartsecurity.system.dto.VisitorApprovalResponse;
 import com.smartsecurity.system.entity.User;
 import com.smartsecurity.system.entity.Visitor;
 import com.smartsecurity.system.entity.Vehicle;
 import com.smartsecurity.system.enums.UserType;
+import com.smartsecurity.system.repository.UserRepository;
 import com.smartsecurity.system.service.VisitorService;
 import com.smartsecurity.system.service.VehicleService;
 import lombok.RequiredArgsConstructor;
@@ -26,15 +30,16 @@ public class TenantAdminController {
 
     private final VisitorService visitorService;
     private final VehicleService vehicleService;
+    private final UserRepository userRepository;
 
     @PostMapping("/visitors/schedule")
-    public ResponseEntity<Visitor> scheduleVisitor(@RequestBody VisitorRequest request,
+    public ResponseEntity<VisitorResponse> scheduleVisitor(@RequestBody VisitorRequest request,
             @AuthenticationPrincipal User admin) {
         return ResponseEntity.ok(visitorService.scheduleVisitor(request, admin));
     }
 
     @PutMapping("/visitors/{id}")
-    public ResponseEntity<Visitor> updateScheduledVisitor(
+    public ResponseEntity<VisitorUpdateResponse> updateScheduledVisitor(
             @PathVariable Long id,
             @RequestBody VisitorRequest request,
             @AuthenticationPrincipal User admin) {
@@ -66,7 +71,8 @@ public class TenantAdminController {
     }
 
     @PatchMapping("/approvals/{id}")
-    public ResponseEntity<Visitor> approveOrReject(@PathVariable Long id, @RequestBody ApprovalRequest request,
+    public ResponseEntity<VisitorApprovalResponse> approveOrReject(@PathVariable Long id,
+            @RequestBody ApprovalRequest request,
             @AuthenticationPrincipal User admin) {
         return ResponseEntity.ok(visitorService.approveOrReject(id, request, admin));
     }
@@ -79,15 +85,17 @@ public class TenantAdminController {
 
     // Vehicle Endpoints for Tenant Admin
     @PostMapping("/tenantsVehicles/entry")
-    public ResponseEntity<Vehicle> vehicleEntry(@RequestBody VehicleRequest request,
-            @AuthenticationPrincipal User admin) {
+    public ResponseEntity<VehicleResponse> vehicleEntry(@RequestBody VehicleRequest request,
+            @AuthenticationPrincipal User adminPrincipal) {
+        User admin = userRepository.findById(adminPrincipal.getId())
+                .orElseThrow(() -> new RuntimeException("User not found"));
         request.setCreatedByUserId(admin.getId());
         request.setTenantId(admin.getTenant().getId());
         if (request.getCompany() == null || request.getCompany().isBlank()) {
             request.setCompany(admin.getTenant().getCompanyName());
         }
         request.setUserType(UserType.TENANT);
-        return ResponseEntity.ok(vehicleService.checkInVehicle(request));
+        return ResponseEntity.ok(vehicleService.checkInVehicle(request, admin));
     }
 
     @DeleteMapping("/tenantsVehicles/{id}")
