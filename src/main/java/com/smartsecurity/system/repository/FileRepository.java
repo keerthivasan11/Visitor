@@ -13,19 +13,24 @@ import com.smartsecurity.system.enums.UserStatus;
 
 public interface FileRepository extends JpaRepository<File, Long> {
 
-   Optional<File> findByVisitor(Visitor visitor);
+      @Query("SELECT f FROM File f WHERE f.visitor.id = :visitorId")
+      Optional<File> findByVisitorId(@Param("visitorId") Long visitorId);
 
-   Optional<File> findByVisitor_Id(Long visitorId);
+      Optional<File> findByVisitor(Visitor visitor);
 
-   void deleteByVisitor_Id(Long visitorId);
+      Optional<File> findByVisitor_Id(Long visitorId);
 
-   @Modifying
-   @Query("UPDATE File f SET f.status = :status WHERE f.visitor.tenant.id = :tenantId")
-   void updateStatusByTenantId(Long tenantId, UserStatus status);
+      void deleteByVisitor_Id(Long visitorId);
 
-   @Modifying
-   @Query("UPDATE File f SET f.status = :status WHERE f.visitor.id = :visitorId")
-   void updateStatusByVisitorId(@Param("visitorId") Long visitorId,
-         @Param("status") UserStatus status);
+      @Modifying
+      @Query("UPDATE File f SET f.status = :status WHERE f.visitor.tenant.id = :tenantId")
+      void updateStatusByTenantId(Long tenantId, UserStatus status);
+
+      @Modifying
+      @Query("UPDATE File f SET f.status = :status WHERE f.visitor.id = :visitorId")
+      void updateStatusByVisitorId(@Param("visitorId") Long visitorId,
+                  @Param("status") UserStatus status);
+
+      void deleteByVisitor(Visitor visitor);
 
 }

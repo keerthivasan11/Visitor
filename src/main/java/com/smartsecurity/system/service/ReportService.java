@@ -1,5 +1,6 @@
 package com.smartsecurity.system.service;
 
+import com.smartsecurity.system.enums.UserStatus;
 import com.smartsecurity.system.enums.VehicleStatus;
 import com.smartsecurity.system.enums.VisitStatus;
 import com.smartsecurity.system.repository.TenantRepository;
@@ -61,7 +62,8 @@ public class ReportService {
 
         public Map<String, Object> getDashboardStats() {
                 Map<String, Object> stats = new HashMap<>();
-                stats.put("totalTenants", tenantRepository.count());
+                stats.put("totalTenants",
+                                tenantRepository.countByStatus(UserStatus.ACTIVE));
                 stats.put("totalVehicles", vehicleRepository.count());
                 stats.put("totalStaffs", staffRepository.count());
                 List<VisitStatus> activeStatuses = List.of(VisitStatus.CHECKED_IN,

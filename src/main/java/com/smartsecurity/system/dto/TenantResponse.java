@@ -2,7 +2,7 @@ package com.smartsecurity.system.dto;
 
 import java.util.Set;
 
-import com.smartsecurity.system.entity.User;
+
 import com.smartsecurity.system.enums.UserStatus;
 
 import lombok.AllArgsConstructor;

@@ -2,20 +2,14 @@ package com.smartsecurity.system.service;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
-
 import com.smartsecurity.system.entity.User;
 import com.smartsecurity.system.entity.RefreshToken;
 import com.smartsecurity.system.repository.RefreshTokenRepository;
-
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-
-import java.time.temporal.ChronoUnit;
-
 import java.time.LocalDateTime;
 import java.util.UUID;
 import org.springframework.transaction.annotation.Transactional;
+
 
 @Service
 @RequiredArgsConstructor
@@ -30,7 +24,7 @@ public class RefreshTokenService {
     public RefreshToken createRefreshToken(User user) {
 
         // optional: one refresh token per user
-        refreshTokenRepository.deleteAllByUser(user);
+        refreshTokenRepository.deleteByUser(user);
 
         RefreshToken refreshToken = RefreshToken.builder()
                 .user(user)
@@ -55,7 +49,7 @@ public class RefreshTokenService {
     }
 
     public void deleteByUser(User user) {
-        refreshTokenRepository.deleteAllByUser(user);
+        refreshTokenRepository.deleteByUser(user);
     }
 
     public void delete(RefreshToken token) {

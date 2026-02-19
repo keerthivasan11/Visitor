@@ -1,8 +1,6 @@
 package com.smartsecurity.system.repository;
 
 import com.smartsecurity.system.entity.VisitorHistory;
-import com.smartsecurity.system.enums.UserStatus;
-import com.smartsecurity.system.enums.VisitStatus;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -89,22 +87,20 @@ public interface VisitorHistoryRepository extends JpaRepository<VisitorHistory, 
 
     void deleteByTenant_Id(Long tenantId);
 
-    // @Modifying
-    // @Query("UPDATE VisitorHistory v SET v.status = :status WHERE v.tenant.id =
-    // :tenantId")
-    // void updateStatusByTenantId(@Param("tenantId") Long tenantId,
-    // @Param("status") VisitStatus status);
-
     @Modifying
-    @Query("""
-                UPDATE VisitorHistory vh
-                SET vh.status = :status,
-                    vh.checkOutTime = :checkoutTime
-                WHERE vh.tenant.id = :tenantId
-                  AND vh.checkOutTime IS NULL
-            """)
-    void forceCheckoutVisitorHistory(@Param("tenantId") Long tenantId,
-            @Param("status") VisitStatus status,
-            @Param("checkoutTime") LocalDateTime checkoutTime);
+    @Query(value = """
+                UPDATE visitor_history vh
+                SET status = v.status,
+                    check_out_time =
+                        CASE
+                            WHEN v.status = 'CHECKED_IN' THEN :now
+                            ELSE vh.check_out_time
+                        END
+                FROM visitors v
+                WHERE vh.visitor_id = v.id
+                  AND v.tenant_id = :tenantId
+            """, nativeQuery = true)
+    void syncStatusWithVisitor(@Param("tenantId") Long tenantId,
+            @Param("now") LocalDateTime now);
 
 }

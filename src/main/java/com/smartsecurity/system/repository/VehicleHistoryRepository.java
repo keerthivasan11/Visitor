@@ -1,7 +1,7 @@
 package com.smartsecurity.system.repository;
 
 import com.smartsecurity.system.entity.VehicleHistory;
-import com.smartsecurity.system.enums.UserStatus;
+
 import com.smartsecurity.system.enums.VehicleStatus;
 
 import org.springframework.data.jpa.repository.JpaRepository;

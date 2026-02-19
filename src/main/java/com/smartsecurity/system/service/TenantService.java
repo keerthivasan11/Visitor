@@ -10,7 +10,6 @@ import com.smartsecurity.system.dto.TenantResponse;
 import com.smartsecurity.system.entity.Staff;
 import com.smartsecurity.system.entity.Tenant;
 import com.smartsecurity.system.entity.User;
-
 import com.smartsecurity.system.entity.StaffHistory;
 import com.smartsecurity.system.enums.Role;
 import com.smartsecurity.system.enums.UserStatus;
@@ -25,7 +24,6 @@ import com.smartsecurity.system.repository.UserRepository;
 import com.smartsecurity.system.repository.VehicleHistoryRepository;
 import com.smartsecurity.system.repository.VehicleRepository;
 import com.smartsecurity.system.repository.VisitorHistoryRepository;
-import com.smartsecurity.system.repository.VisitorRepository;
 import com.smartsecurity.system.security.JwtAuthenticationFilter;
 
 import lombok.RequiredArgsConstructor;
@@ -59,7 +57,6 @@ public class TenantService {
     private final StaffRepository staffRepository;
     private final StaffHistoryRepository staffHistoryRepository;
     private final PasswordEncoder passwordEncoder;
-    private final VisitorRepository visitorRepository;
     private final NotificationDispatcher notificationDispatcher;
     private final VehicleHistoryRepository vehicleHistoryRepository;
     private final FileRepository fileRepository;
@@ -86,7 +83,7 @@ public class TenantService {
     @Transactional(readOnly = true)
     public List<TenantResponse> getAllTenants() {
 
-        List<Tenant> tenants = tenantRepository.findAll();
+        List<Tenant> tenants = tenantRepository.findByStatus(UserStatus.ACTIVE);
 
         // Collect all tenant IDs
         List<Long> tenantIds = tenants.stream()
@@ -170,7 +167,8 @@ public class TenantService {
 
     public List<AdminResponse> getTenantAdmins(Long tenantId) {
 
-        List<User> users = userRepository.findByTenant_Id(tenantId);
+        List<User> users = userRepository
+                .findByTenant_IdAndStatus(tenantId, UserStatus.ACTIVE);
 
         return users.stream()
                 .map(user -> AdminResponse.builder()
@@ -273,23 +271,17 @@ public class TenantService {
     public void deleteTenant(Long id) {
         Tenant tenant = tenantRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Tenant not found"));
-
         long activeVehicleCount = vehicleRepository.countByTenant_IdAndCheckOutTimeIsNull(id);
-
         if (activeVehicleCount > 0) {
             throw new RuntimeException("Active vehicles exist.");
         }
         LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
-        visitorRepository.forceCheckoutVisitors(id, VisitStatus.CHECKED_OUT, now);
-        visitorHistoryRepository.forceCheckoutVisitorHistory(id, VisitStatus.CHECKED_OUT, now);
-        // visitorRepository.updateStatusByTenantId(id, VisitStatus.CHECKED_OUT);
-        // visitorHistoryRepository.updateStatusByTenantId(id, VisitStatus.CHECKED_OUT);
+        visitorHistoryRepository.syncStatusWithVisitor(id, now);
         vehicleRepository.updateStatusByTenantId(id, VehicleStatus.CHECKED_OUT);
         vehicleHistoryRepository.updateStatusByTenantId(id, VehicleStatus.CHECKED_OUT);
         userRepository.updateStatusByTenantId(id, UserStatus.INACTIVE);
         fileRepository.updateStatusByTenantId(id, UserStatus.INACTIVE);
         tenant.setStatus(UserStatus.INACTIVE);
-
     }
 
     // staff

@@ -1,13 +1,13 @@
 spring:
   datasource:
-    # url: jdbc:postgresql://13.205.93.213:5432/visitor?createDatabaseIfNotExist=true
-    # username: visitor
-    # password: visitor
-    # driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:5432/visitor?createDatabaseIfNotExist=true
-    username: postgres
-    password: root
+    url: jdbc:postgresql://13.205.93.213:5432/visitor?createDatabaseIfNotExist=true
+    username: visitor
+    password: visitor
     driver-class-name: org.postgresql.Driver
+    # url: jdbc:postgresql://localhost:5432/visitor?createDatabaseIfNotExist=true
+    # username: postgres
+    # password: root
+    # driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
       ddl-auto: update
@@ -20,7 +20,7 @@ spring:
 
 jwt:
   secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
-  expiration: 1800000 # 30 minutes
+  expiration: 30000 # 30 minutes
   refresh:
     expiration: 604800000 # 7 days
 
@@ -34,10 +34,10 @@ server:
   error:
     include-message: always
 
-# firebase:
-#      credentials: /home/ubuntu/jsonFile/firebase-service-account.json
-
 firebase:
-  credentials: C:/Users/Keerthivasan/Downloads/firebase-service-account.json
+     credentials: /home/ubuntu/jsonFile/firebase-service-account.json
+
+# firebase:
+#   credentials: C:/Users/Keerthivasan/Downloads/firebase-service-account.json
 
 

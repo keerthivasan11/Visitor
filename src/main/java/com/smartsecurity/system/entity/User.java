@@ -1,6 +1,5 @@
 package com.smartsecurity.system.entity;
 
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.smartsecurity.system.enums.Role;
 import com.smartsecurity.system.enums.UserStatus;
@@ -103,7 +102,4 @@ public class User implements UserDetails {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<RefreshToken> refreshTokens = new ArrayList<>();
 
-
 }
-
-

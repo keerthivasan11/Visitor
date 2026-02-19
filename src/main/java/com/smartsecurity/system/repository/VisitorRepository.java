@@ -1,17 +1,17 @@
 package com.smartsecurity.system.repository;
 
 import com.smartsecurity.system.entity.Visitor;
-import com.smartsecurity.system.enums.UserStatus;
+
 import com.smartsecurity.system.enums.VisitStatus;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Modifying;
+
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+
 
 import java.util.List;
 
@@ -36,23 +36,5 @@ public interface VisitorRepository extends JpaRepository<Visitor, Long> {
       @Param("adminId") Long adminId);
 
   List<Visitor> findByTenant_Id(Long tenantId);
-
-  // @Modifying
-  // @Query("UPDATE Visitor v SET v.status = :status WHERE v.tenant.id =
-  // :tenantId")
-  // void updateStatusByTenantId(@Param("tenantId") Long tenantId,
-  // @Param("status") VisitStatus status);
-
-  @Modifying
-  @Query("""
-          UPDATE Visitor v
-          SET v.status = :status,
-              v.checkOutTime = :checkoutTime
-          WHERE v.tenant.id = :tenantId
-            AND v.checkOutTime IS NULL
-      """)
-  void forceCheckoutVisitors(@Param("tenantId") Long tenantId,
-      @Param("status") VisitStatus status,
-      @Param("checkoutTime") LocalDateTime checkoutTime);
 
 }

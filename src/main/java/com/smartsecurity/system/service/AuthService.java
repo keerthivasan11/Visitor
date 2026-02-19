@@ -4,7 +4,7 @@ import com.smartsecurity.system.dto.AuthRequest;
 import com.smartsecurity.system.dto.AuthResponse;
 import com.smartsecurity.system.entity.RefreshToken;
 import com.smartsecurity.system.entity.User;
-import com.smartsecurity.system.enums.UserStatus;
+
 import com.smartsecurity.system.repository.UserRepository;
 import com.smartsecurity.system.security.JwtAuthenticationFilter;
 
@@ -12,7 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -97,18 +96,14 @@ public class AuthService {
 
         @Transactional
         public AuthResponse refreshToken(String refreshTokenValue) {
-
                 RefreshToken refreshToken = refreshTokenService.validateRefreshToken(refreshTokenValue);
-
                 User user = refreshToken.getUser();
-
                 String newAccessToken = jwtService.generateToken(user);
-
                 return AuthResponse.builder()
                                 .accessToken(newAccessToken)
                                 .refreshToken(refreshToken.getToken())
                                 .tokenType("Bearer")
-                                .expiresIn(jwtExpiration) // inject from config
+                                .expiresIn(jwtExpiration)
                                 .role(user.getRole())
                                 .fullName(user.getFullName())
                                 .build();

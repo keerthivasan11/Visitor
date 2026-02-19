@@ -11,7 +11,6 @@ import com.smartsecurity.system.repository.TenantRepository;
 
 import com.smartsecurity.system.repository.VehicleHistoryRepository;
 import com.smartsecurity.system.repository.VehicleRepository;
-import com.smartsecurity.system.security.JwtAuthenticationFilter;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

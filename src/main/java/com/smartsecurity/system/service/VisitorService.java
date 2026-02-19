@@ -10,10 +10,12 @@ import com.smartsecurity.system.dto.VisitorUpdateResponse;
 import com.smartsecurity.system.entity.File;
 import com.smartsecurity.system.entity.Tenant;
 import com.smartsecurity.system.entity.User;
-
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import com.smartsecurity.system.entity.Visitor;
-import com.smartsecurity.system.enums.Role;
-import com.smartsecurity.system.enums.UserStatus;
+import java.io.IOException;
+
 import com.smartsecurity.system.enums.VisitStatus;
 import com.smartsecurity.system.repository.FileRepository;
 import com.smartsecurity.system.repository.TenantRepository;
@@ -30,7 +32,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.ZoneId;
-
+import java.util.Base64;
+import java.util.UUID;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -38,6 +41,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -216,14 +220,23 @@ public class VisitorService {
                 fileRepository.save(newFile);
             }
         }
+        String attachment = null;
+
+        Optional<File> fileOpt = fileRepository.findByVisitorId(visitor.getId());
+        if (fileOpt.isPresent()) {
+            attachment = fileOpt.get().getFileData(); // base64
+        }
 
         return new VisitorUpdateResponse(
                 visitor.getId(),
                 visitor.getVisitorName(),
                 visitor.getMobileNumber(),
+                visitor.getVisitType(),
+                visitor.getIdProof(),
+                visitor.getImageUrl(),
                 visitor.getStatus(),
                 visitor.getVisitDate(),
-                visitor.getComments());
+                visitor.getComments(), attachment);
     }
 
     @Transactional
@@ -329,62 +342,151 @@ public class VisitorService {
         String body = "Visitor " + visitor.getVisitorName()
                 + " is waiting for approval.";
 
-        for (User admin : visitor.getAssignedAdmins()) {
+        Set<String> uniqueTokens = visitor.getAssignedAdmins().stream()
+                .map(User::getFcmToken)
+                .filter(token -> token != null && !token.isBlank())
+                .collect(Collectors.toSet());
 
-            String fcmToken = admin.getFcmToken();
-
-            if (fcmToken == null || fcmToken.isBlank()) {
-                continue;
-            }
-
-            notificationDispatcher.sendAsync(
-                    fcmToken,
-                    title,
-                    body);
+        for (String token : uniqueTokens) {
+            notificationDispatcher.sendAsync(token, title, body);
         }
     }
 
-    @Transactional
-    public VisitorApprovalResponse approveOrReject(Long visitorId, ApprovalRequest request, User admin) {
+    // @Transactional
+    // public VisitorApprovalResponse approveOrReject(Long visitorId,
+    // ApprovalRequest request,
+    // User admin) {
 
+    // User adminUser = userRepository.findById(admin.getId())
+    // .orElseThrow(() -> new RuntimeException("Admin not found"));
+
+    // Visitor visitor = visitorRepository.findById(visitorId)
+    // .orElseThrow(() -> new RuntimeException("Visitor not found"));
+
+    // if (visitor.getStatus() != VisitStatus.PENDING) {
+    // throw new RuntimeException("Already processed: " + visitor.getStatus());
+    // }
+
+    // if (!visitor.getTenant().getId().equals(adminUser.getTenant().getId())) {
+    // throw new RuntimeException("Unauthorized tenant access");
+    // }
+
+    // if (visitor.getAssignedAdmins() != null &&
+    // !visitor.getAssignedAdmins().isEmpty()) {
+    // boolean isAssigned = visitor.getAssignedAdmins().stream()
+    // .anyMatch(a -> a.getId().equals(adminUser.getId()));
+
+    // if (!isAssigned) {
+    // throw new RuntimeException("Not assigned to this visitor");
+    // }
+    // }
+
+    // if (request.getStatus() != VisitStatus.APPROVED &&
+    // request.getStatus() != VisitStatus.REJECTED) {
+    // throw new RuntimeException("Invalid approval status");
+    // }
+
+    // visitor.setStatus(request.getStatus());
+    // visitor.setApprovedBy(adminUser.getId());
+    // visitor.setRejectionRemarks(request.getRemarks());
+
+    // visitor = visitorRepository.save(visitor);
+
+    // File file = visitor.getAttachments() != null
+    // ? visitor.getAttachments().stream().findFirst().orElse(null)
+    // : null;
+
+    // VisitorHistory historyEntry = VisitorHistory.builder()
+    // .visitorId(visitor.getId())
+    // .visitorName(visitor.getVisitorName())
+    // .mobileNumber(visitor.getMobileNumber())
+    // .visitType(visitor.getVisitType())
+    // .idProof(visitor.getIdProof())
+    // .imageUrl(visitor.getImageUrl())
+    // .status(visitor.getStatus())
+    // .visitDate(visitor.getVisitDate())
+    // .tenant(visitor.getTenant())
+    // .createdBy(visitor.getCreatedBy())
+    // .comments(visitor.getComments())
+    // .approvedBy(adminUser.getId())
+    // .rejectionRemarks(visitor.getRejectionRemarks())
+    // .fileName(file != null ? file.getFileName() : null)
+    // .fileUrl(file != null ? file.getFileData() : null)
+    // .build();
+
+    // visitorHistoryRepository.save(historyEntry);
+
+    // // Send after DB save
+    // sendSecurityCreatedNotifications(visitor);
+
+    // return new VisitorApprovalResponse(
+    // visitor.getId(),
+    // visitor.getVisitorName(),
+    // visitor.getMobileNumber(),
+    // visitor.getStatus(),
+    // visitor.getRejectionRemarks(),
+    // visitor.getApprovedBy());
+    // }
+
+    @Transactional
+    public VisitorApprovalResponse approveOrReject(Long visitorId,
+            ApprovalRequest request,
+            User admin) {
+
+        // Fetch admin
         User adminUser = userRepository.findById(admin.getId())
                 .orElseThrow(() -> new RuntimeException("Admin not found"));
 
+        // Fetch visitor
         Visitor visitor = visitorRepository.findById(visitorId)
                 .orElseThrow(() -> new RuntimeException("Visitor not found"));
 
+        // If already processed → DO NOT send notification again
         if (visitor.getStatus() != VisitStatus.PENDING) {
-            throw new RuntimeException("Already processed: " + visitor.getStatus());
+
+            return new VisitorApprovalResponse(
+                    visitor.getId(),
+                    visitor.getVisitorName(),
+                    visitor.getMobileNumber(),
+                    visitor.getStatus(),
+                    visitor.getRejectionRemarks(),
+                    visitor.getApprovedBy());
         }
 
-        if (visitor.getTenant() == null || adminUser.getTenant() == null) {
-            throw new RuntimeException("Tenant information missing");
-        }
-
+        // Tenant validation
         if (!visitor.getTenant().getId().equals(adminUser.getTenant().getId())) {
-            throw new RuntimeException("You can only approve/reject visitors for your tenant");
+            throw new RuntimeException("Unauthorized tenant access");
         }
 
+        // Assigned admin validation (if applicable)
         if (visitor.getAssignedAdmins() != null && !visitor.getAssignedAdmins().isEmpty()) {
+
             boolean isAssigned = visitor.getAssignedAdmins().stream()
                     .anyMatch(a -> a.getId().equals(adminUser.getId()));
 
             if (!isAssigned) {
-                throw new RuntimeException("You are not assigned to approve/reject this visitor");
+                throw new RuntimeException("Not assigned to this visitor");
             }
         }
 
+        // Validate approval status
+        if (request.getStatus() != VisitStatus.APPROVED &&
+                request.getStatus() != VisitStatus.REJECTED) {
+            throw new RuntimeException("Invalid approval status");
+        }
+
+        // ✅ Update status (only once)
         visitor.setStatus(request.getStatus());
         visitor.setApprovedBy(adminUser.getId());
         visitor.setRejectionRemarks(request.getRemarks());
 
         visitor = visitorRepository.save(visitor);
 
-        File file = null;
+        // Save history
+        File file = visitor.getAttachments() != null
+                ? visitor.getAttachments().stream().findFirst().orElse(null)
+                : null;
 
-        if (visitor.getAttachments() != null && !visitor.getAttachments().isEmpty()) {
-            file = visitor.getAttachments().iterator().next();
-        }
         VisitorHistory historyEntry = VisitorHistory.builder()
                 .visitorId(visitor.getId())
                 .visitorName(visitor.getVisitorName())
@@ -404,6 +506,8 @@ public class VisitorService {
                 .build();
 
         visitorHistoryRepository.save(historyEntry);
+
+        // ✅ Send notification ONLY ONCE
         sendSecurityCreatedNotifications(visitor);
 
         return new VisitorApprovalResponse(
@@ -417,32 +521,49 @@ public class VisitorService {
 
     private void sendSecurityCreatedNotifications(Visitor visitor) {
 
-        List<User> security = userRepository.findByRole(Role.SECURITY_USER);
-        String approvedByName = "Admin";
-        Long approvedById = visitor.getApprovedBy();
+        if (visitor == null || visitor.getCreatedBy() == null) {
+            return;
+        }
 
-        if (approvedById != null) {
+        User securityUser = userRepository.findById(visitor.getCreatedBy())
+                .orElse(null);
+
+        if (securityUser == null) {
+            return;
+        }
+
+        String fcmToken = securityUser.getFcmToken();
+
+        if (fcmToken == null || fcmToken.isBlank()) {
+            return;
+        }
+
+        String approvedByName = "Admin";
+
+        if (visitor.getApprovedBy() != null) {
             approvedByName = userRepository
-                    .findById(approvedById) // Integer → Long
+                    .findById(visitor.getApprovedBy())
                     .map(User::getFullName)
                     .orElse("Admin");
         }
-        String title = "Visitor Approved By " + approvedByName;
-        String body = "Visitor approved for " + visitor.getVisitorName();
 
-        for (User admin : security) {
+        String title;
+        String body;
 
-            String fcmToken = admin.getFcmToken();
+        if (visitor.getStatus() == VisitStatus.APPROVED) {
 
-            if (fcmToken == null || fcmToken.isBlank()) {
-                continue;
-            }
+            title = "Visitor Approved By " + approvedByName;
+            body = "Visitor approved for " + visitor.getVisitorName();
 
-            notificationDispatcher.sendAsync(
-                    fcmToken,
-                    title,
-                    body);
+        } else if (visitor.getStatus() == VisitStatus.REJECTED) {
+
+            title = "Visitor Rejected By " + approvedByName;
+            body = "Visitor rejected for " + visitor.getVisitorName();
+
+        } else {
+            return;
         }
+        notificationDispatcher.sendAsync(fcmToken, title, body);
     }
 
     @Transactional
@@ -455,19 +576,15 @@ public class VisitorService {
         LocalDateTime istNow = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
         visitor.setStatus(VisitStatus.CHECKED_IN);
         visitor.setCheckInTime(istNow);
-
         Optional<VisitorHistory> existingHistory = visitorHistoryRepository.findByVisitorId(visitorId).stream()
                 .filter(h -> h.getCheckInTime() == null && h.getStatus() == VisitStatus.APPROVED)
                 .findFirst();
-
         if (existingHistory.isPresent()) {
             VisitorHistory history = existingHistory.get();
             history.setStatus(visitor.getStatus());
             history.setCheckInTime(visitor.getCheckInTime());
-
         } else {
             File file = null;
-
             if (visitor.getAttachments() != null && !visitor.getAttachments().isEmpty()) {
                 file = visitor.getAttachments().iterator().next();
             }
@@ -487,10 +604,8 @@ public class VisitorService {
                     .fileName(file != null ? file.getFileName() : null)
                     .fileUrl(file != null ? file.getFileData() : null)
                     .build();
-
             visitorHistoryRepository.save(historyEntry);
         }
-
         return new VisitorCheckInResponse(
                 visitor.getId(),
                 visitor.getVisitorName(),
@@ -506,14 +621,12 @@ public class VisitorService {
         LocalDateTime istNow = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
         visitor.setStatus(VisitStatus.CHECKED_OUT);
         visitor.setCheckOutTime(istNow);
-
         visitorHistoryRepository.findByVisitorIdAndCheckOutTimeIsNull(visitorId)
                 .ifPresent(history -> {
                     history.setStatus(visitor.getStatus());
                     history.setCheckOutTime(visitor.getCheckOutTime());
                     visitorHistoryRepository.save(history);
                 });
-
         return visitorRepository.save(visitor);
     }
 
@@ -525,48 +638,35 @@ public class VisitorService {
 
     @Transactional
     public void deleteVisitor(Long visitorId) {
-
         Visitor visitor = visitorRepository.findById(visitorId)
                 .orElseThrow(() -> new RuntimeException("Visitor not found"));
-
-        // Soft delete visitor
-        visitor.setStatus(VisitStatus.INACTIVE);
-
-        // Soft delete related files (if needed)
-        fileRepository.updateStatusByVisitorId(visitorId, UserStatus.INACTIVE);
+        fileRepository.deleteByVisitor(visitor);
+        visitorRepository.delete(visitor);
     }
 
     public List<VisitorResponse> getAllVisitorsForTenant(Long tenantId, User admin) {
-
         List<Visitor> visitors = visitorRepository.findByTenant_Id(tenantId);
-
         return visitors.stream().map(visitor -> {
-
             VisitorResponse response = new VisitorResponse();
-
             response.setId(visitor.getId());
             response.setVisitorName(visitor.getVisitorName());
             response.setMobileNumber(visitor.getMobileNumber());
             response.setVisitType(visitor.getVisitType());
+            response.setImageUrl(visitor.getImageUrl());
             response.setVisitDate(visitor.getVisitDate());
             response.setStatus(visitor.getStatus());
             response.setComments(visitor.getComments());
-
             fileRepository.findByVisitor_Id(visitor.getId())
                     .ifPresent(file -> {
                         response.setAttachment(file.getFileData());
                     });
-
             return response;
-
         }).toList();
     }
 
     public File getVisitorFile(Long visitorId) {
-
         Visitor visitor = visitorRepository.findById(visitorId)
                 .orElseThrow(() -> new RuntimeException("Visitor not found"));
-
         return fileRepository.findByVisitor(visitor)
                 .orElseThrow(() -> new RuntimeException("File not found"));
     }

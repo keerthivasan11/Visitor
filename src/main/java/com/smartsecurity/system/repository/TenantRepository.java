@@ -2,8 +2,6 @@ package com.smartsecurity.system.repository;
 
 import com.smartsecurity.system.entity.Tenant;
 import com.smartsecurity.system.enums.UserStatus;
-
-import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -25,5 +23,10 @@ public interface TenantRepository extends JpaRepository<Tenant, Long> {
     @Modifying
     @Query("UPDATE Tenant t SET t.status = :status WHERE t.id = :tenantId")
     void updateStatusByTenantId(Long tenantId, UserStatus status);
+
+    List<Tenant> findByStatus(UserStatus status);
+
+    long countByStatus(UserStatus status);
+
 
 }

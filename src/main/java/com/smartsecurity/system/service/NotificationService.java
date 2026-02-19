@@ -14,6 +14,7 @@ public class NotificationService {
 
         public String sendToToken(String token, String title, String body)
                         throws FirebaseMessagingException {
+
                 Message message = Message.builder()
                                 .setToken(token)
                                 .setNotification(
@@ -23,6 +24,7 @@ public class NotificationService {
                                                                 .build())
                                 .putData("click_action", "FLUTTER_NOTIFICATION_CLICK")
                                 .build();
+
                 return FirebaseMessaging.getInstance().send(message);
         }
 

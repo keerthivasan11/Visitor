@@ -1,5 +1,6 @@
 package com.smartsecurity.system.repository;
 
+import com.smartsecurity.system.entity.Tenant;
 import com.smartsecurity.system.entity.User;
 import com.smartsecurity.system.enums.Role;
 import com.smartsecurity.system.enums.UserStatus;
@@ -26,10 +27,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     List<User> findByTenant_IdIn(List<Long> tenantIds);
 
-    List<User> findByTenant_Id(Long tenantId);
+    List<User> findByTenant_IdAndStatus(Long tenantId, UserStatus status);
 
     @Modifying
     @Query("UPDATE User u SET u.status = :status WHERE u.tenant.id = :tenantId")
     void updateStatusByTenantId(Long tenantId, UserStatus status);
+
+    List<User> findByRoleAndTenant(Role role, Tenant tenant);
+
 
 }

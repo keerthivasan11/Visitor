@@ -4,7 +4,6 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import com.smartsecurity.system.enums.UserStatus;
 
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -38,7 +37,7 @@ public class File {
     @Column(name = "file_type")
     private String fileType;
 
-    @Column(name = "file_data", columnDefinition = "TEXT")
+    @Column(name = "file_data")
     private String fileData;
 
     @CreationTimestamp

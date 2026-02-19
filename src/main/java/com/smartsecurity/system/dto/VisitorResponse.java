@@ -19,6 +19,7 @@ public class VisitorResponse {
     private String visitorName;
     private String mobileNumber;
     private String visitType;
+    private String imageUrl;
     private LocalDate visitDate;
     private VisitStatus status;
     private String comments;
