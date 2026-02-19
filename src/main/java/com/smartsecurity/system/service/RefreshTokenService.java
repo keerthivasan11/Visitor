@@ -16,6 +16,7 @@ import java.time.temporal.ChronoUnit;
 import java.time.LocalDateTime;
 import java.util.UUID;
 import org.springframework.transaction.annotation.Transactional;
+
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -29,14 +30,14 @@ public class RefreshTokenService {
     public RefreshToken createRefreshToken(User user) {
 
         // optional: one refresh token per user
-       refreshTokenRepository.deleteAllByUser(user);
+        refreshTokenRepository.deleteAllByUser(user);
 
         RefreshToken refreshToken = RefreshToken.builder()
-            .user(user)
-            .token(UUID.randomUUID().toString())
-            .expiryDate(LocalDateTime.now().plus(refreshTokenDurationMs, ChronoUnit.MILLIS))
-            .createdAt(LocalDateTime.now())
-            .build();
+                .user(user)
+                .token(UUID.randomUUID().toString())
+                .expiryDate(LocalDateTime.now().plusDays(7))
+                .createdAt(LocalDateTime.now())
+                .build();
 
         return refreshTokenRepository.save(refreshToken);
     }
@@ -44,15 +45,10 @@ public class RefreshTokenService {
     public RefreshToken validateRefreshToken(String token) {
 
         RefreshToken refreshToken = refreshTokenRepository.findByToken(token)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.UNAUTHORIZED,
-                        "Invalid refresh token"));
+                .orElseThrow(() -> new RuntimeException("Invalid refresh token"));
 
         if (refreshToken.getExpiryDate().isBefore(LocalDateTime.now())) {
-            refreshTokenRepository.delete(refreshToken);
-            throw new ResponseStatusException(
-                    HttpStatus.UNAUTHORIZED,
-                    "Refresh token expired");
+            throw new RuntimeException("Refresh token expired");
         }
 
         return refreshToken;

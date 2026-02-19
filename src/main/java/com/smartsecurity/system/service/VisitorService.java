@@ -161,8 +161,8 @@ public class VisitorService {
             throw new RuntimeException("You can only update visitors for your tenant");
         }
 
-        if (visitor.getStatus() == VisitStatus.CHECKED_IN || visitor.getStatus() == VisitStatus.CHECKED_OUT) {
-            throw new RuntimeException("Cannot update visitor who has already checked in");
+        if (visitor.getStatus() == VisitStatus.CHECKED_OUT) {
+            throw new RuntimeException("Cannot update visitor who has already checkedout");
         }
 
         if (request.getVisitorName() != null) {

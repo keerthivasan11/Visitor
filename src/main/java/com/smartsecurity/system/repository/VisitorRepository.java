@@ -11,33 +11,48 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import java.util.List;
 
 @Repository
 public interface VisitorRepository extends JpaRepository<Visitor, Long> {
 
-        List<Visitor> findByVisitDate(LocalDate date);
+  List<Visitor> findByVisitDate(LocalDate date);
 
-        long countByVisitDateAndStatusIn(LocalDate date, List<VisitStatus> statuses);
+  long countByVisitDateAndStatusIn(LocalDate date, List<VisitStatus> statuses);
 
-        @Query("""
-                            SELECT DISTINCT v
-                            FROM Visitor v
-                            JOIN v.assignedAdmins a
-                            WHERE v.status = :status
-                              AND v.tenant.id = :tenantId
-                              AND a.id = :adminId
-                        """)
-        List<Visitor> findPendingForAdmin(
-                        @Param("status") VisitStatus status,
-                        @Param("tenantId") Long tenantId,
-                        @Param("adminId") Long adminId);
+  @Query("""
+          SELECT DISTINCT v
+          FROM Visitor v
+          JOIN v.assignedAdmins a
+          WHERE v.status = :status
+            AND v.tenant.id = :tenantId
+            AND a.id = :adminId
+      """)
+  List<Visitor> findPendingForAdmin(
+      @Param("status") VisitStatus status,
+      @Param("tenantId") Long tenantId,
+      @Param("adminId") Long adminId);
 
-        List<Visitor> findByTenant_Id(Long tenantId);
+  List<Visitor> findByTenant_Id(Long tenantId);
 
-        @Modifying
-        @Query("UPDATE Visitor v SET v.status = :status WHERE v.tenant.id = :tenantId")
-        void updateStatusByTenantId(Long tenantId, VisitStatus status);
+  // @Modifying
+  // @Query("UPDATE Visitor v SET v.status = :status WHERE v.tenant.id =
+  // :tenantId")
+  // void updateStatusByTenantId(@Param("tenantId") Long tenantId,
+  // @Param("status") VisitStatus status);
+
+  @Modifying
+  @Query("""
+          UPDATE Visitor v
+          SET v.status = :status,
+              v.checkOutTime = :checkoutTime
+          WHERE v.tenant.id = :tenantId
+            AND v.checkOutTime IS NULL
+      """)
+  void forceCheckoutVisitors(@Param("tenantId") Long tenantId,
+      @Param("status") VisitStatus status,
+      @Param("checkoutTime") LocalDateTime checkoutTime);
 
 }

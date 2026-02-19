@@ -27,8 +27,9 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
     long countByStatus(VehicleStatus status);
 
     @Modifying
-    @Query("UPDATE Vehicle v SET v.status = :status WHERE v.tenant.id =:tenantId")
-    void updateStatusByTenantId(Long tenantId, VehicleStatus status);
+    @Query("UPDATE Vehicle v SET v.status = :status WHERE v.tenant.id = :tenantId")
+    void updateStatusByTenantId(@Param("tenantId") Long tenantId,
+            @Param("status") VehicleStatus status);
 
     @Query("SELECT v FROM Vehicle v WHERE v.status IN :statuses")
     List<Vehicle> findByStatusIn(@Param("statuses") List<VehicleStatus> statuses);

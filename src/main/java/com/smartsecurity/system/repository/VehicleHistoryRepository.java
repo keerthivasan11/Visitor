@@ -15,36 +15,38 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.Modifying;
+
 @Repository
 public interface VehicleHistoryRepository extends JpaRepository<VehicleHistory, Long> {
 
-  List<VehicleHistory> findByVehicleId(Long vehicleId);
+    List<VehicleHistory> findByVehicleId(Long vehicleId);
 
-  Optional<VehicleHistory> findByVehicleIdAndCheckOutTimeIsNull(Long vehicleId);
+    Optional<VehicleHistory> findByVehicleIdAndCheckOutTimeIsNull(Long vehicleId);
 
-  @Query("""
-          SELECT v FROM VehicleHistory v
-          WHERE (:tenantId IS NULL OR v.tenant.id = :tenantId)
-            AND v.checkInTime BETWEEN :start AND :end
-      """)
-  Page<VehicleHistory> findByFilters(
-      @Param("tenantId") Long tenantId,
-      @Param("start") LocalDateTime start,
-      @Param("end") LocalDateTime end,
-      Pageable pageable);
+    @Query("""
+                SELECT v FROM VehicleHistory v
+                WHERE (:tenantId IS NULL OR v.tenant.id = :tenantId)
+                  AND v.checkInTime BETWEEN :start AND :end
+            """)
+    Page<VehicleHistory> findByFilters(
+            @Param("tenantId") Long tenantId,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end,
+            Pageable pageable);
 
-  @Query("""
-          SELECT v FROM VehicleHistory v
-          WHERE (:vehicleId IS NULL OR v.vehicleId = :vehicleId)
-            AND v.checkInTime >= COALESCE(:start, v.checkInTime)
-            AND v.checkInTime <= COALESCE(:end, v.checkInTime)
-      """)
-  Page<VehicleHistory> findByVehicleIdWithFilters(
-      @Param("vehicleId") Long vehicleId,
-      @Param("start") LocalDateTime start,
-      @Param("end") LocalDateTime end,
-      Pageable pageable);
- @Query("""
+    @Query("""
+                SELECT v FROM VehicleHistory v
+                WHERE (:vehicleId IS NULL OR v.vehicleId = :vehicleId)
+                  AND v.checkInTime >= COALESCE(:start, v.checkInTime)
+                  AND v.checkInTime <= COALESCE(:end, v.checkInTime)
+            """)
+    Page<VehicleHistory> findByVehicleIdWithFilters(
+            @Param("vehicleId") Long vehicleId,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end,
+            Pageable pageable);
+
+    @Query("""
                 SELECT DATE(v.checkInTime), COUNT(v)
                 FROM VehicleHistory v
                 WHERE v.checkInTime >= :start
@@ -71,21 +73,21 @@ public interface VehicleHistoryRepository extends JpaRepository<VehicleHistory, 
             """)
     List<Object[]> countMonthlyVehicles(@Param("start") LocalDateTime start);
 
-   @Query("""
+    @Query("""
                SELECT v FROM VehicleHistory v
                WHERE (:tenantId IS NULL OR v.tenant.id = :tenantId)
                AND v.checkInTime BETWEEN :start AND :end
             """)
     List<VehicleHistory> findByFiltersWithoutPagination(
             @Param("tenantId") Long tenantId,
-            @Param("start") LocalDateTime  start,
-            @Param("end") LocalDateTime  end);
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end);
 
-   void deleteByTenant_Id(Long id);
+    void deleteByTenant_Id(Long id);
 
-   @Modifying
-   @Query("UPDATE VehicleHistory v SET v.status = :status WHERE v.tenant.id = :tenantId")
-   void updateStatusByTenantId(Long tenantId, VehicleStatus status);
+    @Modifying
+    @Query("UPDATE VehicleHistory v SET v.status = :status WHERE v.tenant.id = :tenantId")
+    void updateStatusByTenantId(@Param("tenantId") Long tenantId,
+            @Param("status") VehicleStatus status);
 
- 
 }

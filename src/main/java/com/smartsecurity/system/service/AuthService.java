@@ -62,6 +62,8 @@ public class AuthService {
                         return AuthResponse.builder()
                                         .accessToken(jwtToken)
                                         .refreshToken(refreshToken.getToken())
+                                        .tokenType("Bearer")
+                                        .expiresIn(jwtExpiration)
                                         .role(user.getRole())
                                         .fullName(user.getFullName())
                                         .build();
@@ -96,22 +98,15 @@ public class AuthService {
         @Transactional
         public AuthResponse refreshToken(String refreshTokenValue) {
 
-                RefreshToken oldToken = refreshTokenService.validateRefreshToken(refreshTokenValue);
+                RefreshToken refreshToken = refreshTokenService.validateRefreshToken(refreshTokenValue);
 
-                User user = oldToken.getUser();
+                User user = refreshToken.getUser();
 
-                // Delete old refresh token
-                // refreshTokenService.delete(oldToken);
-
-                // Create new refresh token
-                // RefreshToken newRefreshToken = refreshTokenService.createRefreshToken(user);
-
-                // Generate new access token
                 String newAccessToken = jwtService.generateToken(user);
 
                 return AuthResponse.builder()
                                 .accessToken(newAccessToken)
-                                .refreshToken(oldToken.getToken())
+                                .refreshToken(refreshToken.getToken())
                                 .tokenType("Bearer")
                                 .expiresIn(jwtExpiration) // inject from config
                                 .role(user.getRole())

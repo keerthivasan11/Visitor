@@ -279,18 +279,15 @@ public class TenantService {
         if (activeVehicleCount > 0) {
             throw new RuntimeException("Active vehicles exist.");
         }
-
-        visitorRepository.updateStatusByTenantId(id, VisitStatus.CHECKED_OUT);
-
-        visitorHistoryRepository.updateStatusByTenantId(id, VisitStatus.CHECKED_OUT);
-
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
+        visitorRepository.forceCheckoutVisitors(id, VisitStatus.CHECKED_OUT, now);
+        visitorHistoryRepository.forceCheckoutVisitorHistory(id, VisitStatus.CHECKED_OUT, now);
+        // visitorRepository.updateStatusByTenantId(id, VisitStatus.CHECKED_OUT);
+        // visitorHistoryRepository.updateStatusByTenantId(id, VisitStatus.CHECKED_OUT);
         vehicleRepository.updateStatusByTenantId(id, VehicleStatus.CHECKED_OUT);
         vehicleHistoryRepository.updateStatusByTenantId(id, VehicleStatus.CHECKED_OUT);
-
         userRepository.updateStatusByTenantId(id, UserStatus.INACTIVE);
-
         fileRepository.updateStatusByTenantId(id, UserStatus.INACTIVE);
-
         tenant.setStatus(UserStatus.INACTIVE);
 
     }
